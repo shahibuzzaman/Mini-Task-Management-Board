@@ -1,9 +1,11 @@
-const REQUIRED_BROWSER_ENV_VARS = [
+export const REQUIRED_BROWSER_ENV_VARS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ] as const;
 
-type SupabaseBrowserConfig =
+export type RequiredBrowserEnvVar = (typeof REQUIRED_BROWSER_ENV_VARS)[number];
+
+export type SupabaseBrowserConfig =
   | {
       isConfigured: true;
       url: string;
@@ -14,16 +16,29 @@ type SupabaseBrowserConfig =
       isConfigured: false;
       url: "";
       anonKey: "";
-      missingEnvVars: string[];
+      missingEnvVars: RequiredBrowserEnvVar[];
     };
 
+function readEnvValue(name: RequiredBrowserEnvVar): string {
+  return process.env[name]?.trim() ?? "";
+}
+
+function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+  const url = readEnvValue("NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = readEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   const missingEnvVars = REQUIRED_BROWSER_ENV_VARS.filter((envVarName) => {
     if (envVarName === "NEXT_PUBLIC_SUPABASE_URL") {
-      return url.length === 0;
+      return url.length === 0 || !isValidUrl(url);
     }
 
     return anonKey.length === 0;
@@ -34,7 +49,7 @@ export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
       isConfigured: false,
       url: "",
       anonKey: "",
-      missingEnvVars: [...missingEnvVars],
+      missingEnvVars,
     };
   }
 
@@ -44,4 +59,16 @@ export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
     anonKey,
     missingEnvVars: [],
   };
+}
+
+export function getSupabaseSetupMessage(): string {
+  const config = getSupabaseBrowserConfig();
+
+  if (config.isConfigured) {
+    return "Supabase environment variables are configured.";
+  }
+
+  return `Supabase is not configured. Missing or invalid: ${config.missingEnvVars.join(
+    ", ",
+  )}.`;
 }
