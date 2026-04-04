@@ -1,21 +1,57 @@
+"use client";
+
 import { BoardColumn } from "@/components/board/board-column";
-import { BOARD_COLUMNS, groupTasksByStatus, sampleTasks } from "@/features/tasks/lib/tasks";
+import { BoardErrorState } from "@/components/board/board-error-state";
+import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
+import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
+import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
+import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
+import { useUIStore } from "@/store/ui-store-provider";
 
 export function TaskBoard() {
-  const tasksByStatus = groupTasksByStatus(sampleTasks);
+  const supabaseConfig = getSupabaseBrowserConfig();
+  const activeUser = useUIStore((state) => state.activeUser);
+  const tasksQuery = useTasksQuery();
+
+  if (!supabaseConfig.isConfigured) {
+    return (
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-950">Board</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Configure Supabase to load the read-only board. The active simulated
+          user is <span className="font-semibold text-slate-900">{activeUser}</span>.
+        </p>
+      </section>
+    );
+  }
+
+  if (tasksQuery.isLoading) {
+    return <BoardLoadingState />;
+  }
+
+  if (tasksQuery.isError) {
+    return <BoardErrorState message={tasksQuery.error.message} />;
+  }
+
+  const tasksByStatus = groupTasksByStatus(tasksQuery.data ?? []);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur sm:p-6">
-      <div className="mb-6 flex flex-col gap-2 border-b border-slate-200 pb-6">
-        <h2 className="text-xl font-semibold text-slate-950">Board Preview</h2>
-        <p className="text-sm leading-6 text-slate-600">
-          This is a static placeholder board to verify layout, typing, and app
-          wiring before persistence and interactions are added.
+      <div className="mb-6 flex flex-col gap-2 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-950">Board</h2>
+          <p className="text-sm leading-6 text-slate-600">
+            Read-only tasks loaded from Supabase and grouped by status.
+          </p>
+        </div>
+        <p className="text-sm text-slate-500">
+          Viewing as <span className="font-semibold text-slate-900">{activeUser}</span>
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {BOARD_COLUMNS.map((column) => (
+        {TASK_COLUMNS.map((column) => (
           <BoardColumn
             key={column.status}
             status={column.status}

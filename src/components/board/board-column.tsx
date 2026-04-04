@@ -1,4 +1,6 @@
-import type { Task, TaskStatus } from "@/types/task";
+import { BoardEmptyState } from "@/components/board/board-empty-state";
+import { TaskCard } from "@/components/board/task-card";
+import type { Task, TaskStatus } from "@/features/tasks/types/task";
 
 type BoardColumnProps = {
   title: string;
@@ -24,22 +26,14 @@ export function BoardColumn({ title, status, tasks }: BoardColumnProps) {
       </header>
 
       <div className="flex flex-1 flex-col gap-3">
-        {tasks.map((task) => (
-          <article
-            key={task.id}
-            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-          >
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-              {task.id}
-            </p>
-            <h3 className="mt-2 text-base font-semibold text-slate-900">
-              {task.title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {task.description}
-            </p>
-          </article>
-        ))}
+        {tasks.length > 0 ? (
+          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+        ) : (
+          <BoardEmptyState
+            title={`No ${title.toLowerCase()} tasks`}
+            description="Tasks will appear here when records for this status are available."
+          />
+        )}
       </div>
     </section>
   );

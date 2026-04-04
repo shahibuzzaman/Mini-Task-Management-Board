@@ -1,4 +1,6 @@
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
+import { SimulatedUserSwitcher } from "@/components/board/simulated-user-switcher";
+import { TaskBoard } from "@/components/board/task-board";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 
 export function BoardPageShell() {
@@ -15,9 +17,9 @@ export function BoardPageShell() {
             Mini Task Management Board
           </h1>
           <p className="mt-4 text-base leading-7 text-slate-600">
-            This phase sets up Supabase safely: typed environment helpers,
-            database contracts, demo SQL, and a browser client that stays inert
-            until credentials are configured.
+            The board now reads tasks from Supabase through a dedicated tasks
+            feature module. TanStack Query owns server state and Zustand owns
+            UI-only state.
           </p>
         </header>
 
@@ -26,25 +28,8 @@ export function BoardPageShell() {
           missingEnvVars={supabaseConfig.missingEnvVars}
         />
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">
-            Current Foundation
-          </h2>
-          <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              Typed browser env validation with safe fallback behavior
-            </p>
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              Database types for `public.tasks` and future query usage
-            </p>
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              Demo-only anon RLS policies for local take-home setup
-            </p>
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              SQL schema and seed data for `alice`, `bob`, and `charlie`
-            </p>
-          </div>
-        </section>
+        <SimulatedUserSwitcher />
+        <TaskBoard />
       </div>
     </main>
   );

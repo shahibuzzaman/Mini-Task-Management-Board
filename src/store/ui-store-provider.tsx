@@ -6,25 +6,10 @@ import {
   useContext,
   useState,
 } from "react";
-import { createStore, useStore } from "zustand";
-
-type UIState = {
-  activeTaskId: string | null;
-  setActiveTaskId: (taskId: string | null) => void;
-};
-
-type UIStore = ReturnType<typeof createUIStore>;
+import { useStore } from "zustand";
+import { createUIStore, type UIState, type UIStore } from "@/store/ui-store";
 
 const UIStoreContext = createContext<UIStore | null>(null);
-
-function createUIStore() {
-  return createStore<UIState>()((set) => ({
-    activeTaskId: null,
-    setActiveTaskId: (taskId) => {
-      set({ activeTaskId: taskId });
-    },
-  }));
-}
 
 export function UIStoreProvider({ children }: PropsWithChildren) {
   const [store] = useState(createUIStore);

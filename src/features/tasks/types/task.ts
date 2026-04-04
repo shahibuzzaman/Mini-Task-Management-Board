@@ -10,3 +10,5 @@ export type Task = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type TaskGroupMap = Record<TaskStatus, Task[]>;
