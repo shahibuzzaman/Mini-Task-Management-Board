@@ -78,7 +78,7 @@ export function TaskBoard() {
               <span className="font-semibold text-slate-900">{activeUser}</span>.
             </p>
           </div>
-          <TaskBoardActions />
+          <TaskBoardActions disabled />
         </div>
       </section>
     );

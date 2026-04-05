@@ -29,6 +29,11 @@ export function getDragDestination(
   }
 
   const taskGroups = groupTasksByStatus(tasks);
+  const activeTask = tasks.find((task) => task.id === activeData.taskId);
+
+  if (!activeTask) {
+    return null;
+  }
 
   if (overData.type === "column") {
     return {
@@ -52,7 +57,7 @@ export function getDragDestination(
       over.rect.top + over.rect.height / 2;
 
   const rawIndex = overIndex + (isBelowOverTask ? 1 : 0);
-  const sourceStatus = activeData.status;
+  const sourceStatus = activeTask.status;
   const sourceIndex = taskGroups[sourceStatus].findIndex(
     (task) => task.id === activeData.taskId,
   );

@@ -6,11 +6,9 @@ export const SIMULATED_USERS = ["alice", "bob", "charlie"] as const;
 export type SimulatedUser = (typeof SIMULATED_USERS)[number];
 
 export type UIState = {
-  activeTaskId: string | null;
   activeUser: SimulatedUser;
   isTaskFormOpen: boolean;
   editingTaskId: string | null;
-  setActiveTaskId: (taskId: string | null) => void;
   setActiveUser: (user: SimulatedUser) => void;
   openCreateTaskForm: () => void;
   openEditTaskForm: (taskId: string) => void;
@@ -23,13 +21,9 @@ export function createUIStore() {
   return createStore<UIState>()(
     persist(
       (set) => ({
-        activeTaskId: null,
         activeUser: "alice",
         isTaskFormOpen: false,
         editingTaskId: null,
-        setActiveTaskId: (taskId) => {
-          set({ activeTaskId: taskId });
-        },
         setActiveUser: (user) => {
           set({ activeUser: user });
         },
