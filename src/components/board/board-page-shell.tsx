@@ -19,7 +19,7 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
   const boardTheme = board ? getBoardTheme(board.accentColor) : null;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 sm:px-8 lg:px-10">
+    <div className="w-full max-w-7xl flex-col px-6 py-6 sm:px-8 lg:px-10">
       <div className="flex flex-col gap-8">
         <header className="max-w-3xl">
           <p
@@ -78,6 +78,6 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
           </aside>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

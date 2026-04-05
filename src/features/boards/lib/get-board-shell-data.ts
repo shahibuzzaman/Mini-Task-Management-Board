@@ -22,7 +22,7 @@ export async function getBoardShellData(
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
-    redirect("/auth");
+    redirect("/signin");
   }
 
   const {
@@ -30,7 +30,7 @@ export async function getBoardShellData(
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
-    redirect("/auth");
+    redirect("/signin");
   }
 
   const [, { data: profile, error: profileError }, boards] = await Promise.all([

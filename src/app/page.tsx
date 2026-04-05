@@ -6,18 +6,18 @@ export default async function Home() {
   const config = getSupabaseBrowserConfig();
 
   if (!config.isConfigured) {
-    redirect("/auth");
+    redirect("/signin");
   }
 
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
-    redirect("/auth");
+    redirect("/signin");
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  redirect(user ? "/board" : "/auth");
+  redirect(user ? "/dashboard" : "/signin");
 }

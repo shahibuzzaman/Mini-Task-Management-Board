@@ -7,7 +7,7 @@ alter table public.boards
     check (default_invitee_role in ('admin', 'member'));
 
 alter table public.board_invitations
-  add column if not exists token text not null default encode(gen_random_bytes(24), 'hex'),
+  add column if not exists token text not null default encode(extensions.gen_random_bytes(24), 'hex'),
   add column if not exists token_expires_at timestamptz not null default (timezone('utc', now()) + interval '7 days'),
   add column if not exists last_sent_at timestamptz not null default timezone('utc', now());
 

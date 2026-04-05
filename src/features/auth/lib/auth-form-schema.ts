@@ -17,3 +17,16 @@ export const signUpFormSchema = loginFormSchema.extend({
 
 export type LoginFormSchema = z.infer<typeof loginFormSchema>;
 export type SignUpFormSchema = z.infer<typeof signUpFormSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.email("Enter a valid email address."),
+});
+
+export const updatePasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long."),
+});
+
+export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
+export type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;

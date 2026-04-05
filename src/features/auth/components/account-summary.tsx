@@ -19,7 +19,7 @@ export function AccountSummary({ viewer }: AccountSummaryProps) {
     }
 
     await supabase.auth.signOut();
-    router.replace("/auth");
+    router.replace("/signin");
     router.refresh();
   }
 

@@ -134,7 +134,7 @@ export function InviteAcceptanceCard({
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
-              href={`/auth?next=${encodeURIComponent(nextPath)}`}
+              href={`/signin?next=${encodeURIComponent(nextPath)}`}
               className="rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700"
             >
               Continue to sign in
