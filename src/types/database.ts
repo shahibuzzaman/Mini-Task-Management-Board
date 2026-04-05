@@ -123,8 +123,14 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
-      ensure_current_user_shared_board: {
+      ensure_current_user_profile: {
         Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      create_board_with_owner: {
+        Args: {
+          target_name: string;
+        };
         Returns: string;
       };
       lookup_board_member_candidate: {

@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
 import { taskFormSchema } from "@/features/tasks/lib/task-form-schema";
 
 export const createTaskRouteSchema = taskFormSchema.extend({
+  boardId: boardIdSchema,
   position: z.number().finite(),
 });
 

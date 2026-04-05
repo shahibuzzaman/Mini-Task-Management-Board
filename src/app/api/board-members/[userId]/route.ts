@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
 import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import { mapBoardMemberRowToBoardMember } from "@/features/boards/lib/map-board-member-row";
 import { updateBoardMemberSchema } from "@/features/boards/lib/board-member-route-schemas";
@@ -51,15 +52,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const board = await getCurrentBoardAccess(supabase, user.id);
-
-    if (board.currentUserRole !== "owner") {
-      return NextResponse.json(
-        { error: "Only board owners can update member roles." },
-        { status: 403 },
-      );
-    }
-
     const { userId } = await context.params;
     const parsedUserId = userIdSchema.safeParse(userId);
     const parsedBody = updateBoardMemberSchema.safeParse(await request.json());
@@ -79,6 +71,15 @@ export async function PATCH(request: Request, context: RouteContext) {
             "Invalid board member payload.",
         },
         { status: 400 },
+      );
+    }
+
+    const board = await getCurrentBoardAccess(supabase, user.id, parsedBody.data.boardId);
+
+    if (board.currentUserRole !== "owner") {
+      return NextResponse.json(
+        { error: "Only board owners can update member roles." },
+        { status: 403 },
       );
     }
 
@@ -155,7 +156,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -174,22 +175,31 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const board = await getCurrentBoardAccess(supabase, user.id);
-
-    if (board.currentUserRole !== "owner") {
-      return NextResponse.json(
-        { error: "Only board owners can remove members." },
-        { status: 403 },
-      );
-    }
-
     const { userId } = await context.params;
     const parsedUserId = userIdSchema.safeParse(userId);
+    const url = new URL(request.url);
+    const parsedBoardId = boardIdSchema.safeParse(url.searchParams.get("boardId"));
 
     if (!parsedUserId.success) {
       return NextResponse.json(
         { error: parsedUserId.error.issues[0]?.message ?? "Invalid user ID." },
         { status: 400 },
+      );
+    }
+
+    if (!parsedBoardId.success) {
+      return NextResponse.json(
+        { error: parsedBoardId.error.issues[0]?.message ?? "Invalid board ID." },
+        { status: 400 },
+      );
+    }
+
+    const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
+
+    if (board.currentUserRole !== "owner") {
+      return NextResponse.json(
+        { error: "Only board owners can remove members." },
+        { status: 403 },
       );
     }
 

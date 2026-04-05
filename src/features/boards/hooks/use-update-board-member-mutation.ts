@@ -12,7 +12,8 @@ export function useUpdateBoardMemberMutation(boardId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: UpdateBoardMemberInput) => updateBoardMember(input),
+    mutationFn: (input: Omit<UpdateBoardMemberInput, "boardId">) =>
+      updateBoardMember({ ...input, boardId }),
     onSuccess: (updatedMember) => {
       queryClient.setQueryData<BoardMember[] | undefined>(
         boardsQueryKeys.members(boardId),

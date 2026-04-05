@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
+import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import {
   mapTaskRowToTask,
   type TaskRecord,
@@ -58,6 +60,8 @@ export async function PATCH(request: Request, context: TaskRouteContext) {
     }
 
     const parsedBody = updateTaskRouteSchema.safeParse(await request.json());
+    const url = new URL(request.url);
+    const parsedBoardId = boardIdSchema.safeParse(url.searchParams.get("boardId"));
 
     if (!parsedBody.success) {
       return NextResponse.json(
@@ -66,10 +70,20 @@ export async function PATCH(request: Request, context: TaskRouteContext) {
       );
     }
 
+    if (!parsedBoardId.success) {
+      return NextResponse.json(
+        { error: parsedBoardId.error.issues[0]?.message ?? "Invalid board ID." },
+        { status: 400 },
+      );
+    }
+
+    await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
+
     const { data, error } = await supabase
       .from("tasks")
       .update(parsedBody.data)
       .eq("id", parsedTaskId.data)
+      .eq("board_id", parsedBoardId.data)
       .select(TASK_SELECT)
       .single();
 

@@ -7,8 +7,11 @@ export type MoveTaskInput = {
   position: number;
 };
 
-export async function moveTask(input: MoveTaskInput): Promise<Task> {
-  return requestJson<Task>(`/api/tasks/${input.id}`, {
+export async function moveTask(
+  boardId: string,
+  input: MoveTaskInput,
+): Promise<Task> {
+  return requestJson<Task>(`/api/tasks/${input.id}?boardId=${boardId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });

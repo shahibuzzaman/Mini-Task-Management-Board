@@ -39,14 +39,15 @@ Optionally show:
 Say:
 
 "On first authenticated access, the server ensures the user has a profile,
-creates or joins the shared board, and bootstraps starter tasks if the board is
-empty."
+then the user can create a board and invite collaborators into it."
 
 ## Board And Account UI
 
 Show:
 
 - account card with display name and email
+- board list with create and switch controls
+- owner-only board settings panel
 - board members panel with visible roles
 - protected board shell
 - three columns with tasks
@@ -60,15 +61,19 @@ task list and mutations. Auth state comes from Supabase, not from Zustand."
 
 Show:
 
-1. the members panel
-2. current user role
-3. owner-only add / role change / remove controls
+1. create a board
+2. switch between boards from the board list
+3. the members panel
+4. current user role
+5. owner-only add / role change / remove controls
+6. owner-only board rename form
 
 Say:
 
-"The shared board has two roles: `owner` and `member`. Owners can manage
-membership. Members can collaborate on tasks but cannot manage access. Those
-rules are enforced in both the route handlers and the database policies."
+"Each board has two roles: `owner` and `member`. Owners can rename the board
+and manage membership. Members can collaborate on tasks but cannot manage
+access. Those rules are enforced in both the route handlers and the database
+policies."
 
 ## Create And Edit
 
@@ -129,10 +134,10 @@ server."
 
 Say:
 
-"For this pass, I kept the product as a single shared authenticated board. I
-did not add invite emails, admin tooling, MFA, SSO, or a multi-board dashboard.
-The goal was a strong production-shaped auth pass without rewriting the
-existing app or overbuilding collaboration management. Performance work is now
+"For this pass, I added real multi-board support with board-scoped membership,
+but I did not add invite emails for unregistered users, admin tooling, MFA, or
+SSO. The goal was a strong production-shaped collaboration model without
+overbuilding workspace administration. Performance work is now
 focused on memoization, stable render boundaries, a shared task subscription,
 and virtualization only where it materially helps."
 

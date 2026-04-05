@@ -7,7 +7,7 @@ import { boardsQueryKeys } from "@/features/boards/query-keys";
 export function useBoardMembersQuery(boardId: string) {
   return useQuery({
     queryKey: boardsQueryKeys.members(boardId),
-    queryFn: getBoardMembers,
+    queryFn: () => getBoardMembers(boardId),
     enabled: boardId.length > 0,
   });
 }

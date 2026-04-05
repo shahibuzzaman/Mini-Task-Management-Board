@@ -245,8 +245,8 @@ export function AuthForm({ defaultMode = "login" }: AuthFormProps) {
 
       <p className="mt-5 text-sm leading-6 text-slate-600">
         {mode === "login"
-          ? "Use your email and password to access the shared board."
-          : "A profile is created automatically and you are added to the shared board on first access."}
+          ? "Use your email and password to access your boards."
+          : "A profile is created automatically so you can create a board and invite collaborators after signing in."}
       </p>
     </section>
   );

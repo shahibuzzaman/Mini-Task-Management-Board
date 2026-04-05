@@ -5,8 +5,8 @@
 -- Notes:
 -- - Authentication uses Supabase Auth and cookie-backed SSR sessions.
 -- - Authorization is enforced with Row Level Security.
--- - The current product surface exposes one authenticated shared board.
--- - Seed task data is created the first time an authenticated user opens the board.
+-- - Users can create multiple boards and manage membership per board.
+-- - Starter task data is not inserted automatically; boards begin empty.
 
 create extension if not exists pgcrypto;
 
@@ -20,11 +20,14 @@ create table if not exists public.profiles (
 
 create table if not exists public.boards (
   id uuid primary key default gen_random_uuid(),
-  name text not null unique,
+  name text not null,
   owner_id uuid not null references public.profiles(id) on delete restrict,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+create unique index if not exists boards_owner_name_unique_idx
+  on public.boards (owner_id, lower(name));
 
 create table if not exists public.board_members (
   board_id uuid not null references public.boards(id) on delete cascade,
@@ -174,7 +177,7 @@ begin
 end;
 $$;
 
-create or replace function public.ensure_current_user_shared_board()
+create or replace function public.ensure_current_user_profile()
 returns uuid
 language plpgsql
 security definer
@@ -182,92 +185,59 @@ set search_path = public
 as $$
 declare
   current_user_id uuid := auth.uid();
-  shared_board_id uuid;
-  existing_role text;
-  task_count bigint;
+  current_user_email text;
 begin
   if current_user_id is null then
     raise exception 'Authenticated user required.';
   end if;
 
+  select lower(users.email)
+  into current_user_email
+  from auth.users as users
+  where users.id = current_user_id;
+
   insert into public.profiles (id, email)
-  values (
-    current_user_id,
-    lower((select users.email from auth.users as users where users.id = current_user_id))
-  )
-  on conflict (id) do nothing;
+  values (current_user_id, current_user_email)
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    updated_at = timezone('utc', now());
 
-  select id
-  into shared_board_id
-  from public.boards
-  where name = 'Shared Board'
-  limit 1
-  for update;
+  return current_user_id;
+end;
+$$;
 
-  if shared_board_id is null then
-    insert into public.boards (name, owner_id)
-    values ('Shared Board', current_user_id)
-    returning id into shared_board_id;
-
-    existing_role := 'owner';
-  else
-    select role
-    into existing_role
-    from public.board_members
-    where board_id = shared_board_id
-      and user_id = current_user_id;
+create or replace function public.create_board_with_owner(target_name text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  normalized_name text := nullif(trim(target_name), '');
+  new_board_id uuid;
+begin
+  if current_user_id is null then
+    raise exception 'Authenticated user required.';
   end if;
+
+  if normalized_name is null then
+    raise exception 'Board name is required.';
+  end if;
+
+  perform public.ensure_current_user_profile();
+
+  insert into public.boards (name, owner_id)
+  values (normalized_name, current_user_id)
+  returning id into new_board_id;
 
   insert into public.board_members (board_id, user_id, role)
-  values (shared_board_id, current_user_id, coalesce(existing_role, 'member'))
-  on conflict (board_id, user_id) do nothing;
+  values (new_board_id, current_user_id, 'owner')
+  on conflict (board_id, user_id) do update
+  set role = 'owner';
 
-  select count(*)
-  into task_count
-  from public.tasks
-  where board_id = shared_board_id;
-
-  if task_count = 0 then
-    insert into public.tasks (
-      board_id,
-      title,
-      description,
-      status,
-      position,
-      created_by,
-      updated_by
-    )
-    values
-      (
-        shared_board_id,
-        'Review authenticated board architecture',
-        'Confirm SSR session handling, protected routes, and RLS boundaries before expanding the product.',
-        'todo',
-        1000,
-        current_user_id,
-        current_user_id
-      ),
-      (
-        shared_board_id,
-        'Wire task mutations through authenticated routes',
-        'Use server-backed handlers so the browser never stamps actor identity directly.',
-        'in_progress',
-        1000,
-        current_user_id,
-        current_user_id
-      ),
-      (
-        shared_board_id,
-        'Validate realtime across signed-in users',
-        'Open two authenticated sessions and confirm inserts, edits, and moves stay in sync.',
-        'done',
-        1000,
-        current_user_id,
-        current_user_id
-      );
-  end if;
-
-  return shared_board_id;
+  return new_board_id;
 end;
 $$;
 

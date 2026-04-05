@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { ensureCurrentUserSharedBoard } from "@/features/boards/lib/ensure-current-user-shared-board";
+import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
+import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import {
   mapTaskRowToTask,
   type TaskRecord,
@@ -20,7 +21,7 @@ const TASK_SELECT = `
   updated_by_profile:profiles!tasks_updated_by_fkey(display_name)
 `;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -39,11 +40,21 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const boardId = await ensureCurrentUserSharedBoard(supabase);
+    const url = new URL(request.url);
+    const parsedBoardId = boardIdSchema.safeParse(url.searchParams.get("boardId"));
+
+    if (!parsedBoardId.success) {
+      return NextResponse.json(
+        { error: parsedBoardId.error.issues[0]?.message ?? "Invalid board ID." },
+        { status: 400 },
+      );
+    }
+
+    await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
     const { data, error } = await supabase
       .from("tasks")
       .select(TASK_SELECT)
-      .eq("board_id", boardId)
+      .eq("board_id", parsedBoardId.data)
       .order("position", { ascending: true });
 
     if (error) {
@@ -92,11 +103,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const boardId = await ensureCurrentUserSharedBoard(supabase);
+    await getCurrentBoardAccess(supabase, user.id, parsed.data.boardId);
     const { data, error } = await supabase
       .from("tasks")
       .insert({
-        board_id: boardId,
+        board_id: parsed.data.boardId,
         title: parsed.data.title,
         description: parsed.data.description,
         status: parsed.data.status,

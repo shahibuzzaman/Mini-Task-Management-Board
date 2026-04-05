@@ -7,13 +7,14 @@ import { orderTasksForBoard } from "@/features/tasks/lib/order-tasks-for-board";
 import { replaceOptimisticTaskInTasksCache } from "@/features/tasks/lib/replace-optimistic-task-in-tasks-cache";
 import { upsertTaskInTasksCache } from "@/features/tasks/lib/upsert-task-in-tasks-cache";
 import { tasksQueryKeys } from "@/features/tasks/query-keys";
+import type { CreateTaskInput } from "@/features/tasks/types/task-form";
 import type { Task } from "@/features/tasks/types/task";
 
 export function useCreateTaskMutation(boardId: string, viewer: AuthViewer) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createTask,
+    mutationFn: (input: CreateTaskInput) => createTask(boardId, input),
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKeys.list(boardId) });
 

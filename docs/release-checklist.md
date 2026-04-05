@@ -10,6 +10,7 @@
 
 - [20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql) has been applied if migrating from the original scaffold
 - [20260405174500_add_auth_boards_and_rls.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405174500_add_auth_boards_and_rls.sql) has been applied
+- [20260405223500_add_multi_board_support.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405223500_add_multi_board_support.sql) has been applied
 - or [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run for a manual setup path
 - `public.profiles`, `public.boards`, `public.board_members`, and `public.tasks` exist
 - RLS is enabled on all four tables
@@ -27,9 +28,9 @@
 ## Bootstrap / Seed Expectations
 
 - [seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql) has been applied if using CLI reset flow
-- understand that starter task data is created on first authenticated board access, not as anonymous SQL inserts
-- a signed-in user sees a shared board and starter tasks
-- run [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql) after first sign-in if you want a larger render/drag dataset
+- understand that boards are created from the authenticated UI, not as anonymous SQL inserts
+- a signed-in user can create a board from the sidebar
+- run [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql) after creating a board if you want a larger render/drag dataset
 
 ## Validation
 
@@ -46,6 +47,9 @@
 - log in works
 - `/board` is protected
 - account card shows display name and email
+- board creation works
+- board switching works
+- owner sees board settings controls
 - owner sees board-members management controls
 - member does not see board-members management controls
 - board renders all 3 columns
@@ -75,6 +79,8 @@
 - show sign in or sign up
 - show protected redirect into `/board`
 - show account UI
+- show board creation
+- show board switching
 - show owner/member access difference
 - show create flow
 - show edit flow

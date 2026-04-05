@@ -7,7 +7,7 @@ import { tasksQueryKeys } from "@/features/tasks/query-keys";
 export function useTasksQuery(boardId: string) {
   return useQuery({
     queryKey: tasksQueryKeys.list(boardId),
-    queryFn: getTasks,
+    queryFn: () => getTasks(boardId),
     enabled: boardId.length > 0,
     placeholderData: keepPreviousData,
   });

@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
-import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
+import { ensureCurrentUserProfile } from "@/features/boards/lib/ensure-current-user-profile";
+import { getAccessibleBoards } from "@/features/boards/lib/get-accessible-boards";
 
 type ProfileRow = {
   display_name: string | null;
@@ -10,10 +11,14 @@ type ProfileRow = {
 
 export type BoardShellData = {
   viewer: AuthViewer;
-  board: BoardSummary;
+  boards: BoardSummary[];
+  board: BoardSummary | null;
+  redirectBoardId: string | null;
 };
 
-export async function getBoardShellData(): Promise<BoardShellData> {
+export async function getBoardShellData(
+  requestedBoardId?: string,
+): Promise<BoardShellData> {
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
@@ -28,18 +33,26 @@ export async function getBoardShellData(): Promise<BoardShellData> {
     redirect("/auth");
   }
 
-  const [{ data: profile, error: profileError }, board] = await Promise.all([
+  const [, { data: profile, error: profileError }, boards] = await Promise.all([
+    ensureCurrentUserProfile(supabase),
     supabase
       .from("profiles")
       .select("display_name")
       .eq("id", user.id)
       .single<ProfileRow>(),
-    getCurrentBoardAccess(supabase, user.id),
+    getAccessibleBoards(supabase, user.id),
   ]);
 
   if (profileError) {
     throw new Error(profileError.message);
   }
+
+  const board =
+    (requestedBoardId
+      ? boards.find((candidate) => candidate.id === requestedBoardId)
+      : undefined) ??
+    boards[0] ??
+    null;
 
   return {
     viewer: {
@@ -47,6 +60,9 @@ export async function getBoardShellData(): Promise<BoardShellData> {
       email: user.email,
       displayName: profile.display_name ?? user.email.split("@")[0] ?? "User",
     },
+    boards,
     board,
+    redirectBoardId:
+      board && board.id !== (requestedBoardId ?? "") ? board.id : null,
   };
 }

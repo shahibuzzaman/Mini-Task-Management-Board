@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addBoardMemberSchema } from "@/features/boards/lib/board-member-route-schemas";
+import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
 import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import { getBoardMembers } from "@/features/boards/lib/get-board-members";
 import { mapBoardMemberRowToBoardMember } from "@/features/boards/lib/map-board-member-row";
@@ -30,7 +31,7 @@ const BOARD_MEMBER_SELECT = `
   profile:profiles!board_members_user_id_fkey(display_name, email)
 `;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -49,7 +50,17 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const board = await getCurrentBoardAccess(supabase, user.id);
+    const url = new URL(request.url);
+    const parsedBoardId = boardIdSchema.safeParse(url.searchParams.get("boardId"));
+
+    if (!parsedBoardId.success) {
+      return NextResponse.json(
+        { error: parsedBoardId.error.issues[0]?.message ?? "Invalid board ID." },
+        { status: 400 },
+      );
+    }
+
+    const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
     const members = await getBoardMembers(supabase, board.id, { id: user.id });
 
     return NextResponse.json(members);
@@ -85,15 +96,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const board = await getCurrentBoardAccess(supabase, user.id);
-
-    if (board.currentUserRole !== "owner") {
-      return NextResponse.json(
-        { error: "Only board owners can add members." },
-        { status: 403 },
-      );
-    }
-
     const parsed = addBoardMemberSchema.safeParse(await request.json());
 
     if (!parsed.success) {
@@ -103,6 +105,15 @@ export async function POST(request: Request) {
             parsed.error.issues[0]?.message ?? "Invalid board member payload.",
         },
         { status: 400 },
+      );
+    }
+
+    const board = await getCurrentBoardAccess(supabase, user.id, parsed.data.boardId);
+
+    if (board.currentUserRole !== "owner") {
+      return NextResponse.json(
+        { error: "Only board owners can add members." },
+        { status: 403 },
       );
     }
 

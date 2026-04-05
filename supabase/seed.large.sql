@@ -1,26 +1,26 @@
 -- Optional large-data seed for performance testing.
 -- Usage:
--- 1. Sign up once and open /board so the shared board exists.
+-- 1. Sign up and create at least one board from the app UI.
 -- 2. Run this file in Supabase SQL Editor.
 -- 3. Reload the board and verify drag/drop responsiveness with larger lists.
 
 do $$
 declare
-  shared_board_id uuid;
-  shared_board_owner_id uuid;
+  target_board_id uuid;
+  target_board_owner_id uuid;
 begin
   select id, owner_id
-  into shared_board_id, shared_board_owner_id
+  into target_board_id, target_board_owner_id
   from public.boards
-  where name = 'Shared Board'
+  order by created_at asc
   limit 1;
 
-  if shared_board_id is null or shared_board_owner_id is null then
-    raise exception 'Shared Board was not found. Sign in once before running seed.large.sql.';
+  if target_board_id is null or target_board_owner_id is null then
+    raise exception 'No board was found. Create a board in the app before running seed.large.sql.';
   end if;
 
   delete from public.tasks
-  where board_id = shared_board_id
+  where board_id = target_board_id
     and title like '[perf] %';
 
   insert into public.tasks (
@@ -33,7 +33,7 @@ begin
     updated_by
   )
   select
-    shared_board_id,
+    target_board_id,
     format('[perf] Task %s', series.task_number),
     format(
       'Large-seed performance task %s for drag/drop and render testing.',
@@ -41,8 +41,8 @@ begin
     ),
     series.status,
     series.position,
-    shared_board_owner_id,
-    shared_board_owner_id
+    target_board_owner_id,
+    target_board_owner_id
   from (
     select
       gs as task_number,

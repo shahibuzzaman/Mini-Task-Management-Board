@@ -9,7 +9,7 @@ export function useRemoveBoardMemberMutation(boardId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: removeBoardMember,
+    mutationFn: (userId: string) => removeBoardMember(boardId, userId),
     onSuccess: (_data, userId) => {
       queryClient.setQueryData<BoardMember[] | undefined>(
         boardsQueryKeys.members(boardId),

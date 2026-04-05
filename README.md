@@ -4,8 +4,9 @@ A production-shaped take-home implementation of a collaborative Kanban board
 with:
 
 - Supabase Auth with cookie-backed SSR sessions
-- a protected shared board
-- owner/member role management for the shared board
+- protected board routes
+- multi-board creation and switching
+- owner/member role management per board
 - create, edit, reorder, and cross-column task moves
 - optimistic UI for mutations
 - realtime sync across signed-in users
@@ -36,6 +37,7 @@ Level Security remains the source of truth for access control.
 src/
   app/
     api/
+      boards/
       board-members/
       tasks/
     auth/
@@ -85,7 +87,7 @@ docs/
 Structure rules:
 
 - `features/auth`: auth forms, auth helpers, and viewer types
-- `features/boards`: shared-board bootstrap, membership APIs, hooks, and board metadata helpers
+- `features/boards`: board creation, switching, membership APIs, hooks, and board metadata helpers
 - `features/tasks/api`: client-side fetchers for authenticated app APIs
 - `features/tasks/hooks`: TanStack Query hooks and realtime wiring
 - `features/tasks/lib`: ordering helpers, task mapping, optimistic cache helpers
@@ -221,23 +223,25 @@ Helper database functions:
 
 - `public.is_board_member(uuid)`
 - `public.is_board_owner(uuid)`
-- `public.ensure_current_user_shared_board()`
+- `public.ensure_current_user_profile()`
+- `public.create_board_with_owner(text)`
 - `public.lookup_board_member_candidate(uuid, text)`
 
-The current product surface exposes a single shared board. On first authenticated
-access, the app ensures:
+The current product surface exposes board-scoped collaboration. After
+authentication, the app ensures:
 
 1. the user has a profile
-2. a shared board exists
-3. the user is a member of that board
-4. initial sample tasks exist if the board is empty
+2. the user can create a board from the board sidebar
+3. each selected board loads only if the user is a member
+4. membership and task access are always scoped to the selected board
 
-The board now also exposes a minimal membership management surface:
+Each board exposes a minimal membership management surface:
 
 - `owner` can add members by email
 - `owner` can promote or demote members
 - `owner` can remove members
 - `member` can see the member list but cannot manage it
+- `owner` can rename the board
 
 ## Route Protection
 
@@ -253,13 +257,16 @@ This is intentionally not client-only protection.
 
 Task reads and writes now go through authenticated Next route handlers:
 
-- `GET /api/board-members`
+- `GET /api/boards`
+- `POST /api/boards`
+- `PATCH /api/boards/[boardId]`
+- `GET /api/board-members?boardId=...`
 - `POST /api/board-members`
 - `PATCH /api/board-members/[userId]`
-- `DELETE /api/board-members/[userId]`
-- `GET /api/tasks`
+- `DELETE /api/board-members/[userId]?boardId=...`
+- `GET /api/tasks?boardId=...`
 - `POST /api/tasks`
-- `PATCH /api/tasks/[taskId]`
+- `PATCH /api/tasks/[taskId]?boardId=...`
 
 Why:
 
@@ -372,14 +379,14 @@ npm run dev
 
 5. Open `http://localhost:3000`
 6. Sign up for an account
-7. The first authenticated visit to `/board` will create the shared board,
-   membership, and starter tasks
+7. Create a board from the sidebar
+8. Open the board and start creating tasks
 
 Optional performance dataset:
 
-- after the shared board exists, run
+- after at least one board exists, run
   [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql)
-  to add 180 extra tasks for performance testing
+  to add 180 extra tasks to the earliest board for performance testing
 
 ### Supabase CLI Workflow
 
@@ -407,7 +414,7 @@ What happens:
 
 - the old public `tasks` table is moved out of the primary app surface
 - the new authenticated schema becomes canonical
-- starter tasks are created after first authenticated board access
+- users create boards explicitly from the authenticated app UI
 
 This keeps the migration safe and reviewable without inventing fake identity
 mapping.
@@ -435,22 +442,19 @@ npm run test
 6. Sign up for a real user in production.
 7. Verify:
    - auth works
-   - owner/member management works
+   - board creation and switching work
+   - owner/member management works per board
    - `/board` is protected
    - create/edit/move work
    - realtime works across two signed-in sessions
 
 ## Trade-Offs And Limitations
 
-- The current UI exposes one authenticated shared board, not a multi-board
-  switcher.
-- Membership management is intentionally conservative and limited to the shared
-  board.
 - Delete is still not implemented.
 - Realtime handles inserts and updates; delete handling is still omitted.
 - Midpoint ordering still does not include a rebalance job for dense gaps.
-- There is no MFA, SSO, invitation email flow, admin tooling, or advanced RBAC
-  in this pass.
+- There is no invitation email flow for unregistered users, admin tooling, MFA,
+  SSO, or advanced RBAC in this pass.
 
 ## What Was Intentionally Not Built
 

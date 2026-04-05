@@ -2,8 +2,15 @@ import { BoardPageShell } from "@/components/board/board-page-shell";
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
 import { getBoardShellData } from "@/features/boards/lib/get-board-shell-data";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
+import { redirect } from "next/navigation";
 
-export default async function BoardPage() {
+type BoardPageProps = {
+  searchParams: Promise<{
+    boardId?: string;
+  }>;
+};
+
+export default async function BoardPage({ searchParams }: BoardPageProps) {
   const config = getSupabaseBrowserConfig();
 
   if (!config.isConfigured) {
@@ -14,10 +21,15 @@ export default async function BoardPage() {
           missingEnvVars={config.missingEnvVars}
         />
       </main>
-    );
+      );
   }
 
-  const { viewer, board } = await getBoardShellData();
+  const { boardId } = await searchParams;
+  const { viewer, boards, board, redirectBoardId } = await getBoardShellData(boardId);
 
-  return <BoardPageShell viewer={viewer} board={board} />;
+  if (redirectBoardId && redirectBoardId !== boardId) {
+    redirect(`/board?boardId=${redirectBoardId}`);
+  }
+
+  return <BoardPageShell viewer={viewer} boards={boards} board={board} />;
 }

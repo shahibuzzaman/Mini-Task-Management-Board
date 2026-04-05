@@ -1,1 +1,1 @@
-select 'Seed data is created after the first authenticated user opens the board.' as message;
+select 'Create a board after signing in. Tasks are created per board from the app UI.' as message;

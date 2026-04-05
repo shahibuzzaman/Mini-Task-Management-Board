@@ -12,7 +12,7 @@ export function useMoveTaskMutation(boardId: string, viewer: AuthViewer) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: moveTask,
+    mutationFn: (input: MoveTaskInput) => moveTask(boardId, input),
     onMutate: async (input: MoveTaskInput) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKeys.list(boardId) });
 

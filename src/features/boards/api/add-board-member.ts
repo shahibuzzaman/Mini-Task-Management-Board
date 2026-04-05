@@ -2,6 +2,7 @@ import { requestJson } from "@/lib/query/request-json";
 import type { BoardMember } from "@/features/boards/types/board-member";
 
 export type AddBoardMemberInput = {
+  boardId: string;
   email: string;
 };
 
