@@ -308,16 +308,16 @@ Implemented:
 - `SortableTaskCard` is memoized
 - the board now shares a single tasks query subscription between the shell and
   the drag surface instead of subscribing twice
+- long columns use `@tanstack/react-virtual` so idle render work stays bounded
+  with the larger dataset
+- virtualization automatically falls back to full rendering during active drag
+  so dnd-kit keeps stable sortable behavior
 - [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql)
   provides an optional larger dataset for render and drag/drop smoke testing
 
-Not implemented:
-
-- virtualization
-
-The current task counts do not justify the added complexity of virtualization,
-so the performance pass stays focused on stable props, reduced subscriptions,
-and clear memo boundaries.
+This keeps the performance pass explicit: stable props and reduced
+subscriptions for normal interaction, plus virtualization when column size
+actually justifies it.
 
 ## Optimistic UI Approach
 

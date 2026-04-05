@@ -92,6 +92,12 @@ Say:
 "Ordering is persisted with midpoint-based `position` values rather than array
 index, so common moves do not require rewriting the full column."
 
+If you loaded the larger dataset, also say:
+
+"Long columns virtualize when idle to keep rendering light, then temporarily
+fall back to full rendering during an active drag so the drag-and-drop behavior
+stays predictable."
+
 ## Realtime
 
 Open a second authenticated tab or sign in as another user in another browser.
@@ -126,7 +132,9 @@ Say:
 "For this pass, I kept the product as a single shared authenticated board. I
 did not add invite emails, admin tooling, MFA, SSO, or a multi-board dashboard.
 The goal was a strong production-shaped auth pass without rewriting the
-existing app or overbuilding collaboration management."
+existing app or overbuilding collaboration management. Performance work is now
+focused on memoization, stable render boundaries, a shared task subscription,
+and virtualization only where it materially helps."
 
 ## Closing
 

@@ -218,6 +218,7 @@ export function TaskBoard({
               status={column.status}
               title={column.title}
               tasks={tasksByStatus[column.status]}
+              isDragging={activeTaskId !== null}
             />
           ))}
         </div>

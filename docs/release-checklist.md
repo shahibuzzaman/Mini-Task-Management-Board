@@ -55,6 +55,8 @@
 - drag across columns works
 - realtime updates appear in another signed-in tab without refresh
 - board remains responsive after loading the large performance seed
+- long columns virtualize while idle
+- drag/drop still works correctly after virtualization falls back to full rendering
 
 ## Vercel Deploy Checks
 
