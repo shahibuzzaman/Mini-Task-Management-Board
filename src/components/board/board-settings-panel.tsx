@@ -13,6 +13,7 @@ import {
 import { useDeleteBoardMutation } from "@/features/boards/hooks/use-delete-board-mutation";
 import { useTransferBoardOwnershipMutation } from "@/features/boards/hooks/use-transfer-board-ownership-mutation";
 import { useUpdateBoardMutation } from "@/features/boards/hooks/use-update-board-mutation";
+import { getBoardsPath } from "@/features/boards/lib/board-routes";
 import type { BoardSummary } from "@/features/boards/types/board";
 import type {
   BoardAccentColor,
@@ -160,7 +161,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
 
     try {
       await deleteBoardMutation.mutateAsync(board.id);
-      router.replace("/board");
+      router.replace(getBoardsPath());
       router.refresh();
     } catch (error) {
       setFeedback({

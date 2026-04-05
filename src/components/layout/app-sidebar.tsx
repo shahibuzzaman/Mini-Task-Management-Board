@@ -2,17 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CreateBoardModal } from "@/components/board/create-board-modal";
+import { getBoardPath } from "@/features/boards/lib/board-routes";
+import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
+import { useUIStore } from "@/store/ui-store-provider";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const pathnameParts = pathname.split("/").filter(Boolean);
+  const activeBoardId =
+    pathnameParts[0] === "boards" && pathnameParts[1] ? pathnameParts[1] : null;
+  const boardsQuery = useBoardsQuery([]);
+  const boards = boardsQuery.data ?? [];
+  const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: DashboardIcon },
-    { name: "My Tasks", href: "/my-tasks", icon: TasksIcon },
-    { name: "Notifications", href: "/notifications", icon: NotificationsIcon },
-    { name: "Boards", href: "/dashboard", icon: ProjectsIcon },
-    { name: "Archives", href: "/archives", icon: ArchivesIcon },
+    { name: "Boards", icon: ProjectsIcon },
   ];
+
+  function isItemActive(name: string) {
+    if (name === "Dashboard") {
+      return pathname === "/dashboard";
+    }
+
+    return pathnameParts[0] === "boards";
+  }
 
   return (
     <aside className="w-[260px] h-screen bg-[#fafbfe] border-r border-[#e2e8f0] flex flex-col flex-shrink-0 fixed left-0 top-0">
@@ -29,7 +44,11 @@ export function AppSidebar() {
       </div>
 
       <div className="px-5 mb-6 mt-2">
-        <button className="w-full bg-[#3525cd] hover:bg-[#4f46e5] transition-colors text-white rounded-xl py-3 text-[14px] font-bold shadow-sm flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={openCreateBoardModal}
+          className="w-full bg-[#3525cd] hover:bg-[#4f46e5] transition-colors text-white rounded-xl py-3 text-[14px] font-bold shadow-sm flex items-center justify-center gap-2"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           New Board
         </button>
@@ -37,20 +56,55 @@ export function AppSidebar() {
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.name === "Dashboard" && pathname === "/board");
+          const isActive = isItemActive(item.name);
+
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
-                isActive
-                  ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
-            >
-              <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
-              {item.name}
-            </Link>
+            <div key={item.name}>
+              <div
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
+                  isActive
+                    ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
+                    : "text-slate-600"
+                }`}
+              >
+                <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
+                {item.name}
+              </div>
+
+              {item.name === "Boards" ? (
+                <div className="mt-2 ml-4 border-l border-slate-200 pl-3">
+                  {boards.length > 0 ? (
+                    <ul className="space-y-1">
+                      {boards.map((board) => {
+                        const isBoardActive = board.id === activeBoardId;
+
+                        return (
+                          <li key={board.id}>
+                            <Link
+                              href={getBoardPath(board.id)}
+                              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+                                isBoardActive
+                                  ? "bg-white text-slate-950 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              <span
+                                className={`h-2 w-2 rounded-full ${getBoardDotClassName(board.accentColor)}`}
+                              />
+                              <span className="truncate">{board.name}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="px-3 py-2 text-[12px] leading-5 text-slate-500">
+                      No boards yet.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
           );
         })}
       </nav>
@@ -66,8 +120,25 @@ export function AppSidebar() {
           </div>
         </div>
       </div>
+      <CreateBoardModal />
     </aside>
   );
+}
+
+function getBoardDotClassName(color: "sky" | "emerald" | "amber" | "rose" | "slate") {
+  switch (color) {
+    case "sky":
+      return "bg-sky-500";
+    case "emerald":
+      return "bg-emerald-500";
+    case "amber":
+      return "bg-amber-500";
+    case "rose":
+      return "bg-rose-500";
+    case "slate":
+    default:
+      return "bg-slate-500";
+  }
 }
 
 // Icons mapping matching exact style parameters
@@ -77,26 +148,8 @@ function DashboardIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function TasksIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-  );
-}
-
-function NotificationsIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-  );
-}
-
 function ProjectsIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-  );
-}
-
-function ArchivesIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="2" y="4" width="20" height="5" rx="2" ry="2"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/></svg>
   );
 }

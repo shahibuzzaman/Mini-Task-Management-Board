@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { InviteSignOutButton } from "@/components/board/invite-sign-out-button";
+import { getBoardPath, getBoardsPath } from "@/features/boards/lib/board-routes";
 import { requestJson } from "@/lib/query/request-json";
 
 type InviteAcceptanceCardProps = {
@@ -57,7 +58,7 @@ export function InviteAcceptanceCard({
         kind: "success",
         message: `Invitation accepted. Redirecting to ${response.boardName}.`,
       });
-      router.replace(`/board?boardId=${response.boardId}`);
+      router.replace(getBoardPath(response.boardId));
       router.refresh();
     } catch (error) {
       setFeedback({
@@ -106,7 +107,7 @@ export function InviteAcceptanceCard({
           This invitation has already been accepted.
           <div className="mt-4">
             <Link
-              href="/board"
+              href={getBoardsPath()}
               className="inline-flex rounded-full border border-emerald-200 px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:bg-white"
             >
               Open boards

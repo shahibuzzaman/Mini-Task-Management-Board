@@ -1,12 +1,13 @@
 "use client";
 
 import type { BoardSummary } from "@/features/boards/types/board";
-import type { AuthViewer } from "@/features/auth/types/viewer";
+import { getBoardPath } from "@/features/boards/lib/board-routes";
 import Link from "next/link";
+import { useUIStore } from "@/store/ui-store-provider";
 
-export function ProjectsOverview({ boards, viewer }: { boards: BoardSummary[], viewer: AuthViewer }) {
+export function ProjectsOverview({ boards }: { boards: BoardSummary[] }) {
   const pinnedBoards = boards.slice(0, 2);
-  const allBoards = boards;
+  const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
 
   return (
     <div className="w-full px-10 py-10 max-w-[1200px] mx-auto">
@@ -73,7 +74,7 @@ export function ProjectsOverview({ boards, viewer }: { boards: BoardSummary[], v
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pinnedBoards.map((board, index) => (
-            <Link key={board.id} href={`/board?boardId=${board.id}`} className="group relative bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-hidden hover:shadow-md hover:border-[#3525cd]/30 transition-all flex flex-col h-[220px]">
+            <Link key={board.id} href={getBoardPath(board.id)} className="group relative bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-hidden hover:shadow-md hover:border-[#3525cd]/30 transition-all flex flex-col h-[220px]">
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${index === 0 ? "bg-[#3525cd]" : "bg-cyan-500"}`}></div>
               
               <div className="flex justify-between items-start mb-4">
@@ -112,7 +113,7 @@ export function ProjectsOverview({ boards, viewer }: { boards: BoardSummary[], v
             </Link>
           ))}
 
-          <button className="group relative bg-[#f8faff] rounded-xl border-2 border-dashed border-[#e2e8f0] p-6 flex flex-col items-center justify-center hover:bg-[#f1f5f9] hover:border-[#cbd5e1] transition-all h-[220px]">
+          <button onClick={openCreateBoardModal} className="group relative bg-[#f8faff] rounded-xl border-2 border-dashed border-[#e2e8f0] p-6 flex flex-col items-center justify-center hover:bg-[#f1f5f9] hover:border-[#cbd5e1] transition-all h-[220px]">
              <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-800 mb-4 group-hover:scale-110 transition-transform border border-slate-100">
                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
              </div>
@@ -122,7 +123,7 @@ export function ProjectsOverview({ boards, viewer }: { boards: BoardSummary[], v
       </div>
 
 
-      <button className="fixed bottom-10 right-10 w-14 h-14 bg-[#3525cd] text-white rounded-[14px] shadow-lg flex items-center justify-center hover:bg-[#4f46e5] hover:-translate-y-1 transition-all z-50">
+      <button onClick={openCreateBoardModal} className="fixed bottom-10 right-10 w-14 h-14 bg-[#3525cd] text-white rounded-[14px] shadow-lg flex items-center justify-center hover:bg-[#4f46e5] hover:-translate-y-1 transition-all z-50">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </button>
     </div>

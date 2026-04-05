@@ -35,6 +35,7 @@ type TaskFormModalProps = {
   boardId: string;
   mode: "create" | "edit";
   task?: Task;
+  initialStatus?: TaskEditorValues["status"];
   members: BoardMember[];
   isOpen: boolean;
   isPending: boolean;
@@ -58,9 +59,15 @@ const DEFAULT_VALUES: TaskEditorValues = {
   assigneeId: "",
 };
 
-function getInitialValues(task?: Task): TaskEditorValues {
+function getInitialValues(
+  task?: Task,
+  initialStatus: TaskEditorValues["status"] = "todo",
+): TaskEditorValues {
   if (!task) {
-    return DEFAULT_VALUES;
+    return {
+      ...DEFAULT_VALUES,
+      status: initialStatus,
+    };
   }
 
   return {
@@ -78,6 +85,7 @@ export function TaskFormModal({
   boardId,
   mode,
   task,
+  initialStatus = "todo",
   members,
   isOpen,
   isPending,
@@ -96,7 +104,10 @@ export function TaskFormModal({
   const [commentBody, setCommentBody] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const initialValues = useMemo(() => getInitialValues(task), [task]);
+  const initialValues = useMemo(
+    () => getInitialValues(task, initialStatus),
+    [initialStatus, task],
+  );
 
   const form = useForm<TaskFormSchema>({
     resolver: zodResolver(taskFormSchema),

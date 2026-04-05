@@ -1,8 +1,8 @@
 import { memo, useMemo } from "react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { BoardColumnDropZone } from "@/components/board/board-column-drop-zone";
-import { BoardEmptyState } from "@/components/board/board-empty-state";
 import { SortableTaskCard } from "@/components/board/sortable-task-card";
+import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { VirtualizedTaskColumnList } from "@/components/board/virtualized-task-column-list";
 import { shouldVirtualizeTaskColumn } from "@/features/tasks/lib/task-virtualization";
 import type { Task, TaskStatus } from "@/features/tasks/types/task";
@@ -28,19 +28,27 @@ function BoardColumnComponent({
   const shouldUseScrollableList = tasks.length > 12;
 
   return (
-    <section className="flex min-h-80 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">
+    <section className="flex min-h-[32rem] flex-col">
+      <header className="mb-5 flex items-center justify-between px-2">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-[28px] font-semibold tracking-tight text-slate-800">
             {title}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Status key: <span className="font-mono">{status}</span>
-          </p>
+          <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${getColumnCountTone(status)}`}>
+            {tasks.length}
+          </span>
         </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-          {tasks.length}
-        </span>
+        <button
+          type="button"
+          className="rounded-full px-2 py-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          aria-label={`More options for ${title}`}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <circle cx="5" cy="12" r="1.75" />
+            <circle cx="12" cy="12" r="1.75" />
+            <circle cx="19" cy="12" r="1.75" />
+          </svg>
+        </button>
       </header>
 
       <BoardColumnDropZone status={status}>
@@ -57,7 +65,7 @@ function BoardColumnComponent({
                 items={taskIds}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {tasks.map((task) => (
                     <SortableTaskCard
                       key={task.id}
@@ -69,18 +77,34 @@ function BoardColumnComponent({
               </SortableContext>
             </div>
           )
-        ) : (
-          <BoardEmptyState
-            title={`No ${title.toLowerCase()} tasks`}
-            description="Tasks will appear here when records for this status are available."
+        ) : null}
+
+        <div className="mt-4">
+          <TaskBoardActions
+            status={status}
+            disabled={isReadOnly}
+            disabledReason={
+              isReadOnly ? "Archived boards are read-only." : undefined
+            }
           />
-        )}
+        </div>
       </BoardColumnDropZone>
     </section>
   );
 }
 
 export const BoardColumn = memo(BoardColumnComponent, areBoardColumnPropsEqual);
+
+function getColumnCountTone(status: TaskStatus) {
+  switch (status) {
+    case "todo":
+      return "bg-indigo-50 text-indigo-500";
+    case "in_progress":
+      return "bg-cyan-100 text-cyan-700";
+    case "done":
+      return "bg-indigo-50 text-indigo-500";
+  }
+}
 
 function areBoardColumnPropsEqual(
   previousProps: BoardColumnProps,

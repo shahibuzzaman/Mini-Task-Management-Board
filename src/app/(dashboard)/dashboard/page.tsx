@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   }
 
   // We omit requesting a specific board since we only need the aggregate dashboard data
-  const { boards, viewer } = await getBoardShellData();
+  const { boards } = await getBoardShellData();
 
-  return <ProjectsOverview boards={boards} viewer={viewer} />;
+  return <ProjectsOverview boards={boards} />;
 }

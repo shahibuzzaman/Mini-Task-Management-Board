@@ -28,6 +28,7 @@ type TaskBoardShellProps = {
 export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const isTaskFormOpen = useUIStore((state) => state.isTaskFormOpen);
   const editingTaskId = useUIStore((state) => state.editingTaskId);
+  const createTaskStatus = useUIStore((state) => state.createTaskStatus);
   const closeTaskForm = useUIStore((state) => state.closeTaskForm);
   const tasksQuery = useTasksQuery(board.id);
   const membersQuery = useBoardMembersQuery(board.id);
@@ -128,6 +129,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         key={`${editingTask?.id ?? "create"}-${isTaskFormOpen ? "open" : "closed"}`}
         mode={editingTask ? "edit" : "create"}
         task={editingTask}
+        initialStatus={createTaskStatus}
         isOpen={isTaskFormOpen}
         boardId={board.id}
         members={membersQuery.data ?? []}
