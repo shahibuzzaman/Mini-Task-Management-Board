@@ -12,6 +12,7 @@ type BoardColumnProps = {
   status: TaskStatus;
   tasks: Task[];
   isDragging: boolean;
+  isReadOnly: boolean;
 };
 
 function BoardColumnComponent({
@@ -19,6 +20,7 @@ function BoardColumnComponent({
   status,
   tasks,
   isDragging,
+  isReadOnly,
 }: BoardColumnProps) {
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
   const shouldUseVirtualization =
@@ -44,7 +46,7 @@ function BoardColumnComponent({
       <BoardColumnDropZone status={status}>
         {tasks.length > 0 ? (
           shouldUseVirtualization ? (
-            <VirtualizedTaskColumnList tasks={tasks} />
+            <VirtualizedTaskColumnList tasks={tasks} isReadOnly={isReadOnly} />
           ) : (
             <div
               className={
@@ -57,7 +59,11 @@ function BoardColumnComponent({
               >
                 <div className="space-y-3">
                   {tasks.map((task) => (
-                    <SortableTaskCard key={task.id} task={task} />
+                    <SortableTaskCard
+                      key={task.id}
+                      task={task}
+                      disabled={isReadOnly}
+                    />
                   ))}
                 </div>
               </SortableContext>
@@ -84,6 +90,7 @@ function areBoardColumnPropsEqual(
     previousProps.title !== nextProps.title ||
     previousProps.status !== nextProps.status ||
     previousProps.isDragging !== nextProps.isDragging ||
+    previousProps.isReadOnly !== nextProps.isReadOnly ||
     previousProps.tasks.length !== nextProps.tasks.length
   ) {
     return false;

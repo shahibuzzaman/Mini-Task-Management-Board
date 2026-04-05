@@ -8,5 +8,5 @@ export const addBoardMemberSchema = z.object({
 
 export const updateBoardMemberSchema = z.object({
   boardId: boardIdSchema,
-  role: z.enum(["owner", "member"]),
+  role: z.enum(["admin", "member"]),
 });

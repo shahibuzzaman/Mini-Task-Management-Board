@@ -40,7 +40,7 @@ export function BoardMemberRow({
         </span>
       </div>
 
-      {canManageMembers ? (
+      {canManageMembers && member.role !== "owner" ? (
         <div className="mt-4 flex flex-col gap-3">
           <label className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             Role
@@ -50,7 +50,7 @@ export function BoardMemberRow({
               onChange={(event) => void onRoleChange(event.target.value as BoardRole)}
               className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
             >
-              <option value="owner">Owner</option>
+              <option value="admin">Admin</option>
               <option value="member">Member</option>
             </select>
           </label>
@@ -64,6 +64,10 @@ export function BoardMemberRow({
             {isRemoving ? "Removing..." : "Remove member"}
           </button>
         </div>
+      ) : canManageMembers && member.role === "owner" ? (
+        <p className="mt-4 text-xs leading-5 text-slate-500">
+          Ownership is transferred from the board settings panel.
+        </p>
       ) : null}
     </li>
   );

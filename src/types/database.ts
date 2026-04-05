@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 export type TaskStatus = "todo" | "in_progress" | "done";
-export type BoardRole = "owner" | "member";
+export type BoardRole = "owner" | "admin" | "member";
 
 export type Database = {
   public: {
@@ -40,21 +40,27 @@ export type Database = {
         Row: {
           id: string;
           name: string;
+          description: string;
           owner_id: string;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          description?: string;
           owner_id: string;
+          archived_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          description?: string;
           owner_id?: string;
+          archived_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -120,6 +126,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      board_invitations: {
+        Row: {
+          id: string;
+          board_id: string;
+          email: string;
+          role: BoardRole;
+          invited_by: string;
+          invited_user_id: string | null;
+          created_at: string;
+          accepted_at: string | null;
+          revoked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          board_id: string;
+          email: string;
+          role?: BoardRole;
+          invited_by: string;
+          invited_user_id?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+          revoked_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          board_id?: string;
+          email?: string;
+          role?: BoardRole;
+          invited_by?: string;
+          invited_user_id?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+          revoked_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -130,6 +172,18 @@ export type Database = {
       create_board_with_owner: {
         Args: {
           target_name: string;
+          target_description?: string;
+        };
+        Returns: string;
+      };
+      accept_pending_board_invitations: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
+      transfer_board_ownership: {
+        Args: {
+          target_board_id: string;
+          target_user_id: string;
         };
         Returns: string;
       };

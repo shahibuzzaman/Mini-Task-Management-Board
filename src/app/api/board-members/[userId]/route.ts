@@ -76,9 +76,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBody.data.boardId);
 
-    if (board.currentUserRole !== "owner") {
+    if (
+      board.currentUserRole !== "owner" &&
+      board.currentUserRole !== "admin"
+    ) {
       return NextResponse.json(
-        { error: "Only board owners can update member roles." },
+        { error: "Only board owners and admins can update member roles." },
         { status: 403 },
       );
     }
@@ -99,9 +102,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (
-      currentMembership.role === "owner" &&
-      parsedBody.data.role === "member"
+      board.currentUserRole === "admin" &&
+      currentMembership.role === "owner"
     ) {
+      return NextResponse.json(
+        { error: "Admins cannot change the board owner role." },
+        { status: 403 },
+      );
+    }
+
+    if (currentMembership.role === "owner") {
       const { count, error: ownersCountError } = await supabase
         .from("board_members")
         .select("*", { count: "exact", head: true })
@@ -196,9 +206,12 @@ export async function DELETE(request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
 
-    if (board.currentUserRole !== "owner") {
+    if (
+      board.currentUserRole !== "owner" &&
+      board.currentUserRole !== "admin"
+    ) {
       return NextResponse.json(
-        { error: "Only board owners can remove members." },
+        { error: "Only board owners and admins can remove members." },
         { status: 403 },
       );
     }
@@ -219,6 +232,13 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     if (currentMembership.role === "owner") {
+      if (board.currentUserRole === "admin") {
+        return NextResponse.json(
+          { error: "Admins cannot remove the board owner." },
+          { status: 403 },
+        );
+      }
+
       const { count, error: ownersCountError } = await supabase
         .from("board_members")
         .select("*", { count: "exact", head: true })

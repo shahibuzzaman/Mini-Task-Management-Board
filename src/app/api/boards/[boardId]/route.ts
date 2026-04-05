@@ -16,6 +16,8 @@ type RouteContext = {
 type BoardRow = {
   id: string;
   name: string;
+  description: string;
+  archived_at: string | null;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -49,9 +51,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
 
-    if (board.currentUserRole !== "owner") {
+    if (
+      board.currentUserRole !== "owner" &&
+      board.currentUserRole !== "admin"
+    ) {
       return NextResponse.json(
-        { error: "Only board owners can update board settings." },
+        { error: "Only board owners and admins can update board settings." },
         { status: 403 },
       );
     }
@@ -65,13 +70,25 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    if (
+      parsedBody.data.archivedAt !== undefined &&
+      board.currentUserRole !== "owner"
+    ) {
+      return NextResponse.json(
+        { error: "Only board owners can archive or unarchive a board." },
+        { status: 403 },
+      );
+    }
+
     const { data, error } = await supabase
       .from("boards")
       .update({
         name: parsedBody.data.name,
+        description: parsedBody.data.description,
+        archived_at: parsedBody.data.archivedAt,
       })
       .eq("id", parsedBoardId.data)
-      .select("id, name")
+      .select("id, name, description, archived_at")
       .single<BoardRow>();
 
     if (error) {
@@ -81,6 +98,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({
       id: data.id,
       name: data.name,
+      description: data.description,
+      archivedAt: data.archived_at,
       currentUserRole: board.currentUserRole,
     });
   } catch (error) {
@@ -92,5 +111,64 @@ export async function PATCH(request: Request, context: RouteContext) {
           : "Unable to update the board.";
 
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase is not configured." },
+        { status: 503 },
+      );
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const { boardId } = await context.params;
+    const parsedBoardId = boardIdSchema.safeParse(boardId);
+
+    if (!parsedBoardId.success) {
+      return NextResponse.json(
+        { error: parsedBoardId.error.issues[0]?.message ?? "Invalid board ID." },
+        { status: 400 },
+      );
+    }
+
+    const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
+
+    if (board.currentUserRole !== "owner") {
+      return NextResponse.json(
+        { error: "Only board owners can delete a board." },
+        { status: 403 },
+      );
+    }
+
+    const { error } = await supabase
+      .from("boards")
+      .delete()
+      .eq("id", parsedBoardId.data);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(null);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Unable to delete the board.",
+      },
+      { status: 500 },
+    );
   }
 }

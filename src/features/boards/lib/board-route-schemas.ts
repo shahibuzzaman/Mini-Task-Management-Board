@@ -8,6 +8,13 @@ export const createBoardSchema = z.object({
     .trim()
     .min(2, "Board name must be at least 2 characters.")
     .max(60, "Board name must be 60 characters or fewer."),
+  description: z
+    .string()
+    .trim()
+    .max(280, "Board description must be 280 characters or fewer.")
+    .default(""),
 });
 
-export const updateBoardSchema = createBoardSchema;
+export const updateBoardSchema = createBoardSchema.extend({
+  archivedAt: z.string().datetime().nullable().optional(),
+});

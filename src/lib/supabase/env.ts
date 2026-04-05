@@ -2,8 +2,10 @@ export const REQUIRED_BROWSER_ENV_VARS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ] as const;
+export const REQUIRED_SERVER_ENV_VARS = ["SUPABASE_SERVICE_ROLE_KEY"] as const;
 
 export type RequiredBrowserEnvVar = (typeof REQUIRED_BROWSER_ENV_VARS)[number];
+export type RequiredServerEnvVar = (typeof REQUIRED_SERVER_ENV_VARS)[number];
 
 export type SupabaseBrowserConfig =
   | {
@@ -25,6 +27,10 @@ function getSupabaseUrlEnvValue(): string {
 
 function getSupabaseAnonKeyEnvValue(): string {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+}
+
+function getSupabaseServiceRoleKeyEnvValue(): string {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
 }
 
 function isValidUrl(value: string): boolean {
@@ -85,4 +91,32 @@ export function getSupabaseSetupMessage(): string {
   return `Supabase is not configured. Missing or invalid: ${config.missingEnvVars.join(
     ", ",
   )}.`;
+}
+
+export function getSupabaseServiceRoleConfig():
+  | {
+      isConfigured: true;
+      serviceRoleKey: string;
+      missingEnvVars: [];
+    }
+  | {
+      isConfigured: false;
+      serviceRoleKey: "";
+      missingEnvVars: RequiredServerEnvVar[];
+    } {
+  const serviceRoleKey = getSupabaseServiceRoleKeyEnvValue();
+
+  if (serviceRoleKey.length === 0) {
+    return {
+      isConfigured: false,
+      serviceRoleKey: "",
+      missingEnvVars: ["SUPABASE_SERVICE_ROLE_KEY"],
+    };
+  }
+
+  return {
+    isConfigured: true,
+    serviceRoleKey,
+    missingEnvVars: [],
+  };
 }

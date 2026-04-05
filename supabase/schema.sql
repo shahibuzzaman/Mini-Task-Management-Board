@@ -5,7 +5,9 @@
 -- Notes:
 -- - Authentication uses Supabase Auth and cookie-backed SSR sessions.
 -- - Authorization is enforced with Row Level Security.
--- - Users can create multiple boards and manage membership per board.
+-- - Users can create multiple boards, invite users by email, and manage
+--   membership per board.
+-- - Boards support owner/admin/member roles plus archive/delete lifecycle.
 -- - Starter task data is not inserted automatically; boards begin empty.
 
 create extension if not exists pgcrypto;
@@ -21,7 +23,9 @@ create table if not exists public.profiles (
 create table if not exists public.boards (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  description text not null default '',
   owner_id uuid not null references public.profiles(id) on delete restrict,
+  archived_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -32,9 +36,21 @@ create unique index if not exists boards_owner_name_unique_idx
 create table if not exists public.board_members (
   board_id uuid not null references public.boards(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
-  role text not null default 'member' check (role in ('owner', 'member')),
+  role text not null default 'member' check (role in ('owner', 'admin', 'member')),
   created_at timestamptz not null default timezone('utc', now()),
   primary key (board_id, user_id)
+);
+
+create table if not exists public.board_invitations (
+  id uuid primary key default gen_random_uuid(),
+  board_id uuid not null references public.boards(id) on delete cascade,
+  email text not null,
+  role text not null default 'member' check (role in ('owner', 'admin', 'member')),
+  invited_by uuid not null references public.profiles(id) on delete cascade,
+  invited_user_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  accepted_at timestamptz,
+  revoked_at timestamptz
 );
 
 create table if not exists public.tasks (
@@ -52,6 +68,13 @@ create table if not exists public.tasks (
 
 create index if not exists board_members_user_id_idx
   on public.board_members (user_id);
+
+create index if not exists board_invitations_board_id_idx
+  on public.board_invitations (board_id, created_at desc);
+
+create unique index if not exists board_invitations_active_unique_idx
+  on public.board_invitations (board_id, lower(email))
+  where accepted_at is null and revoked_at is null;
 
 create index if not exists tasks_board_status_position_idx
   on public.tasks (board_id, status, position);
@@ -147,6 +170,50 @@ as $$
   );
 $$;
 
+create or replace function public.board_role_rank(target_role text)
+returns integer
+language sql
+immutable
+as $$
+  select case target_role
+    when 'owner' then 3
+    when 'admin' then 2
+    when 'member' then 1
+    else 0
+  end;
+$$;
+
+create or replace function public.is_board_admin(target_board_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.board_members
+    where board_id = target_board_id
+      and user_id = auth.uid()
+      and role in ('owner', 'admin')
+  );
+$$;
+
+create or replace function public.is_board_active(target_board_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.boards
+    where id = target_board_id
+      and archived_at is null
+  );
+$$;
+
 create or replace function public.lookup_board_member_candidate(
   target_board_id uuid,
   target_email text
@@ -207,7 +274,10 @@ begin
 end;
 $$;
 
-create or replace function public.create_board_with_owner(target_name text)
+create or replace function public.create_board_with_owner(
+  target_name text,
+  target_description text default ''
+)
 returns uuid
 language plpgsql
 security definer
@@ -216,6 +286,7 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   normalized_name text := nullif(trim(target_name), '');
+  normalized_description text := coalesce(trim(target_description), '');
   new_board_id uuid;
 begin
   if current_user_id is null then
@@ -228,8 +299,8 @@ begin
 
   perform public.ensure_current_user_profile();
 
-  insert into public.boards (name, owner_id)
-  values (normalized_name, current_user_id)
+  insert into public.boards (name, description, owner_id)
+  values (normalized_name, normalized_description, current_user_id)
   returning id into new_board_id;
 
   insert into public.board_members (board_id, user_id, role)
@@ -238,6 +309,120 @@ begin
   set role = 'owner';
 
   return new_board_id;
+end;
+$$;
+
+create or replace function public.accept_pending_board_invitations()
+returns uuid[]
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  current_user_email text;
+  accepted_board_ids uuid[] := '{}';
+  invite_record record;
+  existing_role text;
+begin
+  if current_user_id is null then
+    raise exception 'Authenticated user required.';
+  end if;
+
+  select lower(users.email)
+  into current_user_email
+  from auth.users as users
+  where users.id = current_user_id;
+
+  if current_user_email is null then
+    return accepted_board_ids;
+  end if;
+
+  perform public.ensure_current_user_profile();
+
+  for invite_record in
+    select *
+    from public.board_invitations
+    where lower(email) = current_user_email
+      and accepted_at is null
+      and revoked_at is null
+    order by created_at asc
+  loop
+    select role
+    into existing_role
+    from public.board_members
+    where board_id = invite_record.board_id
+      and user_id = current_user_id;
+
+    if existing_role is null then
+      insert into public.board_members (board_id, user_id, role)
+      values (invite_record.board_id, current_user_id, invite_record.role)
+      on conflict (board_id, user_id) do nothing;
+    elsif public.board_role_rank(invite_record.role) > public.board_role_rank(existing_role) then
+      update public.board_members
+      set role = invite_record.role
+      where board_id = invite_record.board_id
+        and user_id = current_user_id;
+    end if;
+
+    update public.board_invitations
+    set
+      invited_user_id = current_user_id,
+      accepted_at = timezone('utc', now())
+    where id = invite_record.id;
+
+    accepted_board_ids := array_append(accepted_board_ids, invite_record.board_id);
+  end loop;
+
+  return accepted_board_ids;
+end;
+$$;
+
+create or replace function public.transfer_board_ownership(
+  target_board_id uuid,
+  target_user_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_user_id uuid := auth.uid();
+begin
+  if current_user_id is null then
+    raise exception 'Authenticated user required.';
+  end if;
+
+  if not public.is_board_owner(target_board_id) then
+    raise exception 'Only board owners can transfer ownership.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.board_members
+    where board_id = target_board_id
+      and user_id = target_user_id
+  ) then
+    raise exception 'The selected user is not a board member.';
+  end if;
+
+  update public.boards
+  set owner_id = target_user_id
+  where id = target_board_id;
+
+  update public.board_members
+  set role = 'admin'
+  where board_id = target_board_id
+    and user_id = current_user_id
+    and current_user_id <> target_user_id;
+
+  update public.board_members
+  set role = 'owner'
+  where board_id = target_board_id
+    and user_id = target_user_id;
+
+  return target_board_id;
 end;
 $$;
 
@@ -274,6 +459,7 @@ execute function public.set_task_actor_fields();
 alter table public.profiles enable row level security;
 alter table public.boards enable row level security;
 alter table public.board_members enable row level security;
+alter table public.board_invitations enable row level security;
 alter table public.tasks enable row level security;
 
 drop policy if exists "profiles are self managed" on public.profiles;
@@ -308,13 +494,13 @@ for select
 to authenticated
 using (public.is_board_member(id));
 
-drop policy if exists "owners can update boards" on public.boards;
-create policy "owners can update boards"
+drop policy if exists "admins can update boards" on public.boards;
+create policy "admins can update boards"
 on public.boards
 for update
 to authenticated
-using (public.is_board_owner(id))
-with check (public.is_board_owner(id));
+using (public.is_board_admin(id))
+with check (public.is_board_admin(id));
 
 drop policy if exists "owners can create boards" on public.boards;
 create policy "owners can create boards"
@@ -323,6 +509,13 @@ for insert
 to authenticated
 with check (owner_id = auth.uid());
 
+drop policy if exists "owners can delete boards" on public.boards;
+create policy "owners can delete boards"
+on public.boards
+for delete
+to authenticated
+using (public.is_board_owner(id));
+
 drop policy if exists "members can view memberships" on public.board_members;
 create policy "members can view memberships"
 on public.board_members
@@ -330,13 +523,30 @@ for select
 to authenticated
 using (public.is_board_member(board_id));
 
-drop policy if exists "owners can manage memberships" on public.board_members;
-create policy "owners can manage memberships"
+drop policy if exists "admins can manage memberships" on public.board_members;
+create policy "admins can manage memberships"
 on public.board_members
 for all
 to authenticated
-using (public.is_board_owner(board_id))
-with check (public.is_board_owner(board_id));
+using (public.is_board_admin(board_id))
+with check (public.is_board_admin(board_id));
+
+drop policy if exists "admins can manage board invitations" on public.board_invitations;
+create policy "admins can manage board invitations"
+on public.board_invitations
+for all
+to authenticated
+using (public.is_board_admin(board_id))
+with check (public.is_board_admin(board_id));
+
+drop policy if exists "invitees can view their invitations" on public.board_invitations;
+create policy "invitees can view their invitations"
+on public.board_invitations
+for select
+to authenticated
+using (
+  lower(email) = lower((select users.email from auth.users as users where users.id = auth.uid()))
+);
 
 drop policy if exists "members can read tasks" on public.tasks;
 create policy "members can read tasks"
@@ -352,6 +562,7 @@ for insert
 to authenticated
 with check (
   public.is_board_member(board_id)
+  and public.is_board_active(board_id)
   and created_by = auth.uid()
   and updated_by = auth.uid()
 );
@@ -364,5 +575,6 @@ to authenticated
 using (public.is_board_member(board_id))
 with check (
   public.is_board_member(board_id)
+  and public.is_board_active(board_id)
   and updated_by = auth.uid()
 );

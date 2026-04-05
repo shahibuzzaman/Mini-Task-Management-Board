@@ -4,6 +4,7 @@
 
 - `NEXT_PUBLIC_SUPABASE_URL` is set in the target environment
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set in the target environment
+- `SUPABASE_SERVICE_ROLE_KEY` is set in the target environment
 - Values match the intended Supabase project
 
 ## Database Setup
@@ -11,9 +12,10 @@
 - [20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql) has been applied if migrating from the original scaffold
 - [20260405174500_add_auth_boards_and_rls.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405174500_add_auth_boards_and_rls.sql) has been applied
 - [20260405223500_add_multi_board_support.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405223500_add_multi_board_support.sql) has been applied
+- [20260405232000_add_invites_admin_and_board_lifecycle.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405232000_add_invites_admin_and_board_lifecycle.sql) has been applied
 - or [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run for a manual setup path
-- `public.profiles`, `public.boards`, `public.board_members`, and `public.tasks` exist
-- RLS is enabled on all four tables
+- `public.profiles`, `public.boards`, `public.board_members`, `public.board_invitations`, and `public.tasks` exist
+- RLS is enabled on all five tables
 - no demo-open anon task policies remain on the authenticated tables
 - Realtime is enabled for `public.tasks`
 - [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql) is available for optional performance testing
@@ -22,6 +24,7 @@
 
 - email/password auth is enabled in the Supabase project
 - the project allows redirects to `/auth/callback`
+- invitation emails are enabled in the Supabase Auth email provider
 - the first signed-up user can access `/board`
 - `/board` redirects to `/auth` when signed out
 
@@ -49,9 +52,13 @@
 - account card shows display name and email
 - board creation works
 - board switching works
+- invitation email can be sent for a new email address
+- accepting the invite adds the user to the intended board
 - owner sees board settings controls
-- owner sees board-members management controls
-- member does not see board-members management controls
+- owner and admin see invitation management controls
+- owner can transfer ownership
+- owner can archive/unarchive and delete a board
+- member does not see invitation or destructive board controls
 - board renders all 3 columns
 - create task works
 - edit task works
@@ -81,6 +88,7 @@
 - show account UI
 - show board creation
 - show board switching
+- show invitation flow
 - show owner/member access difference
 - show create flow
 - show edit flow

@@ -39,7 +39,8 @@ Optionally show:
 Say:
 
 "On first authenticated access, the server ensures the user has a profile,
-then the user can create a board and invite collaborators into it."
+then the user can create a board, invite collaborators by email, and manage
+that board through owner/admin/member roles."
 
 ## Board And Account UI
 
@@ -47,7 +48,8 @@ Show:
 
 - account card with display name and email
 - board list with create and switch controls
-- owner-only board settings panel
+- board settings panel with description, archive state, and destructive controls
+- invitation panel with pending invites
 - board members panel with visible roles
 - protected board shell
 - three columns with tasks
@@ -65,15 +67,17 @@ Show:
 2. switch between boards from the board list
 3. the members panel
 4. current user role
-5. owner-only add / role change / remove controls
-6. owner-only board rename form
+5. invite a not-yet-registered user by email
+6. show pending invitation state
+7. owner/admin role change controls
+8. ownership transfer and archive/delete controls
 
 Say:
 
-"Each board has two roles: `owner` and `member`. Owners can rename the board
-and manage membership. Members can collaborate on tasks but cannot manage
-access. Those rules are enforced in both the route handlers and the database
-policies."
+"Each board has three roles: `owner`, `admin`, and `member`. Owners control
+board lifecycle and ownership transfer. Admins can manage invitations and
+memberships. Members collaborate on tasks only. Those rules are enforced in
+both the route handlers and the database policies."
 
 ## Create And Edit
 
@@ -127,19 +131,19 @@ Say:
 
 "Authorization is RLS-first. Profiles, board membership, and tasks are all
 guarded in the database. The app route handlers use a server Supabase client
-with verified auth cookies, and the board route itself is protected on the
-server."
+with verified auth cookies, and invitation emails use a separate server-only
+Supabase admin client. The board route itself is protected on the server."
 
 ## Trade-Offs
 
 Say:
 
-"For this pass, I added real multi-board support with board-scoped membership,
-but I did not add invite emails for unregistered users, admin tooling, MFA, or
-SSO. The goal was a strong production-shaped collaboration model without
-overbuilding workspace administration. Performance work is now
-focused on memoization, stable render boundaries, a shared task subscription,
-and virtualization only where it materially helps."
+"For this pass, I completed the board collaboration model: multi-board support,
+email invitations, `owner/admin/member` permissions, archive/delete, and
+ownership transfer. I still did not add MFA, SSO, or a broader organization
+admin console. Performance work is focused on memoization, stable render
+boundaries, a shared task subscription, and virtualization only where it
+materially helps."
 
 ## Closing
 

@@ -4,6 +4,8 @@ import type { BoardSummary } from "@/features/boards/types/board";
 export type UpdateBoardInput = {
   boardId: string;
   name: string;
+  description: string;
+  archivedAt?: string | null;
 };
 
 export async function updateBoard(
@@ -13,6 +15,8 @@ export async function updateBoard(
     method: "PATCH",
     body: JSON.stringify({
       name: input.name,
+      description: input.description,
+      archivedAt: input.archivedAt,
     }),
   });
 }

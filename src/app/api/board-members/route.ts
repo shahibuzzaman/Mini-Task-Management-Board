@@ -110,9 +110,12 @@ export async function POST(request: Request) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsed.data.boardId);
 
-    if (board.currentUserRole !== "owner") {
+    if (
+      board.currentUserRole !== "owner" &&
+      board.currentUserRole !== "admin"
+    ) {
       return NextResponse.json(
-        { error: "Only board owners can add members." },
+        { error: "Only board owners and admins can add members." },
         { status: 403 },
       );
     }

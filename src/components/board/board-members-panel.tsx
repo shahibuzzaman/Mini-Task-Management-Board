@@ -33,7 +33,8 @@ export function BoardMembersPanel({
   const updateMemberMutation = useUpdateBoardMemberMutation(board.id);
   const removeMemberMutation = useRemoveBoardMemberMutation(board.id);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const canManageMembers = board.currentUserRole === "owner";
+  const canManageMembers =
+    board.currentUserRole === "owner" || board.currentUserRole === "admin";
 
   const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
 
@@ -104,7 +105,7 @@ export function BoardMembersPanel({
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {canManageMembers
-            ? "Owners can add members, change roles, and remove access."
+            ? "Owners and admins can change member roles and remove access. Owners retain board ownership controls."
             : "Members can view the current board collaborators."}
         </p>
       </header>

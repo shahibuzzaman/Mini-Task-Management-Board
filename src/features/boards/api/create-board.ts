@@ -3,6 +3,7 @@ import type { BoardSummary } from "@/features/boards/types/board";
 
 export type CreateBoardInput = {
   name: string;
+  description?: string;
 };
 
 export async function createBoard(input: CreateBoardInput): Promise<BoardSummary> {

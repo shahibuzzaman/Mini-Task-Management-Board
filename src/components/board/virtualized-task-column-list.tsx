@@ -12,10 +12,12 @@ import type { Task } from "@/features/tasks/types/task";
 
 type VirtualizedTaskColumnListProps = {
   tasks: Task[];
+  isReadOnly?: boolean;
 };
 
 export function VirtualizedTaskColumnList({
   tasks,
+  isReadOnly = false,
 }: VirtualizedTaskColumnListProps) {
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
@@ -57,7 +59,7 @@ export function VirtualizedTaskColumnList({
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                <SortableTaskCard task={task} />
+                <SortableTaskCard task={task} disabled={isReadOnly} />
               </div>
             );
           })}

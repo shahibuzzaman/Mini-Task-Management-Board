@@ -8,12 +8,14 @@ type TaskCardProps = {
   task: Task;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   isDragOverlay?: boolean;
+  isReadOnly?: boolean;
 };
 
 function TaskCardComponent({
   task,
   dragHandleProps,
   isDragOverlay = false,
+  isReadOnly = false,
 }: TaskCardProps) {
   const openEditTaskForm = useUIStore((state) => state.openEditTaskForm);
 
@@ -24,7 +26,8 @@ function TaskCardComponent({
           <button
             type="button"
             aria-label={`Drag ${task.title}`}
-            className="rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-white"
+            disabled={isReadOnly}
+            className="rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             {...dragHandleProps}
           >
             ::
@@ -33,7 +36,7 @@ function TaskCardComponent({
             {getVisibleTaskId(task.id)}
           </p>
         </div>
-        {!isDragOverlay ? (
+        {!isDragOverlay && !isReadOnly ? (
           <button
             type="button"
             onClick={() => openEditTaskForm(task.id)}

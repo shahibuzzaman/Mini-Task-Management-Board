@@ -90,6 +90,7 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
                     </p>
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
                       {board.currentUserRole}
+                      {board.archivedAt ? " · archived" : ""}
                     </p>
                   </div>
                   {isActive ? (

@@ -10,6 +10,8 @@ type MembershipRow = {
 type BoardRow = {
   id: string;
   name: string;
+  description: string;
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -26,7 +28,7 @@ export async function getAccessibleBoards(
         .returns<MembershipRow[]>(),
       supabase
         .from("boards")
-        .select("id, name, created_at")
+        .select("id, name, description, archived_at, created_at")
         .order("created_at", { ascending: true })
         .returns<BoardRow[]>(),
     ]);
@@ -48,6 +50,8 @@ export async function getAccessibleBoards(
     .map((board) => ({
       id: board.id,
       name: board.name,
+      description: board.description,
+      archivedAt: board.archived_at,
       currentUserRole: roleByBoardId.get(board.id) ?? "member",
     }));
 }

@@ -2,7 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BoardErrorState } from "@/components/board/board-error-state";
+import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
+import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
+import { useDeleteBoardMutation } from "@/features/boards/hooks/use-delete-board-mutation";
+import { useTransferBoardOwnershipMutation } from "@/features/boards/hooks/use-transfer-board-ownership-mutation";
 import { useUpdateBoardMutation } from "@/features/boards/hooks/use-update-board-mutation";
 import type { BoardSummary } from "@/features/boards/types/board";
 
@@ -17,13 +22,22 @@ type BoardSettingsPanelProps = {
 
 export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
   const router = useRouter();
+  const membersQuery = useBoardMembersQuery(board.id);
   const updateBoardMutation = useUpdateBoardMutation();
+  const transferOwnershipMutation = useTransferBoardOwnershipMutation();
+  const deleteBoardMutation = useDeleteBoardMutation();
   const [name, setName] = useState(board.name);
+  const [description, setDescription] = useState(board.description);
+  const [targetOwnerId, setTargetOwnerId] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
 
-  if (board.currentUserRole !== "owner") {
+  if (board.currentUserRole !== "owner" && board.currentUserRole !== "admin") {
     return null;
   }
+
+  const transferableMembers = (membersQuery.data ?? []).filter(
+    (member) => !member.isCurrentUser,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,6 +47,8 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
       await updateBoardMutation.mutateAsync({
         boardId: board.id,
         name,
+        description,
+        archivedAt: board.archivedAt,
       });
       setFeedback({
         kind: "success",
@@ -50,6 +66,86 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
     }
   }
 
+  async function handleArchiveToggle() {
+    setFeedback(null);
+
+    try {
+      await updateBoardMutation.mutateAsync({
+        boardId: board.id,
+        name,
+        description,
+        archivedAt: board.archivedAt ? null : new Date().toISOString(),
+      });
+      setFeedback({
+        kind: "success",
+        message: board.archivedAt
+          ? "Board unarchived."
+          : "Board archived successfully.",
+      });
+      router.refresh();
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to update board archive state.",
+      });
+    }
+  }
+
+  async function handleTransferOwnership() {
+    if (targetOwnerId.length === 0) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await transferOwnershipMutation.mutateAsync({
+        boardId: board.id,
+        targetUserId: targetOwnerId,
+      });
+      setFeedback({
+        kind: "success",
+        message: "Board ownership transferred.",
+      });
+      router.refresh();
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to transfer ownership.",
+      });
+    }
+  }
+
+  async function handleDeleteBoard() {
+    const confirmed = window.confirm(
+      "Delete this board? This will permanently remove its tasks, members, and invitations.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await deleteBoardMutation.mutateAsync(board.id);
+      router.replace("/board");
+      router.refresh();
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Unable to delete the board.",
+      });
+    }
+  }
+
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
       <header>
@@ -57,7 +153,9 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           Board Settings
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Owners can rename the board and manage collaboration from here.
+          {board.currentUserRole === "owner"
+            ? "Owners can update details, transfer ownership, archive, or delete the board."
+            : "Admins can update board details while owners retain destructive controls."}
         </p>
       </header>
 
@@ -89,6 +187,23 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           />
         </div>
 
+        <div>
+          <label
+            htmlFor={`board-settings-description-${board.id}`}
+            className="block text-sm font-medium text-slate-700"
+          >
+            Description
+          </label>
+          <textarea
+            id={`board-settings-description-${board.id}`}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            disabled={updateBoardMutation.isPending}
+          />
+        </div>
+
         <button
           type="submit"
           disabled={updateBoardMutation.isPending || name.trim().length < 2}
@@ -97,6 +212,96 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           {updateBoardMutation.isPending ? "Saving..." : "Save board settings"}
         </button>
       </form>
+
+      {board.currentUserRole === "owner" ? (
+        <>
+          <div className="mt-6 border-t border-slate-200 pt-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+                  Archive
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Archived boards remain visible but become read-only for task changes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleArchiveToggle()}
+                disabled={updateBoardMutation.isPending}
+                className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+              >
+                {board.archivedAt ? "Unarchive board" : "Archive board"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 pt-6">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+              Transfer ownership
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Promote another collaborator to owner. You will become an admin.
+            </p>
+
+            <div className="mt-4">
+              {membersQuery.isLoading ? (
+                <BoardLoadingState />
+              ) : membersQuery.isError ? (
+                <BoardErrorState message={membersQuery.error.message} />
+              ) : transferableMembers.length > 0 ? (
+                <div className="space-y-3">
+                  <select
+                    value={targetOwnerId}
+                    onChange={(event) => setTargetOwnerId(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  >
+                    <option value="">Select a new owner</option>
+                    {transferableMembers.map((member) => (
+                      <option key={member.userId} value={member.userId}>
+                        {member.displayName} ({member.role})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => void handleTransferOwnership()}
+                    disabled={
+                      transferOwnershipMutation.isPending || targetOwnerId.length === 0
+                    }
+                    className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                  >
+                    {transferOwnershipMutation.isPending
+                      ? "Transferring..."
+                      : "Transfer ownership"}
+                  </button>
+                </div>
+              ) : (
+                <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
+                  Add another member before transferring ownership.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 pt-6">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-rose-700">
+              Danger zone
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Deleting a board permanently removes its tasks, members, and invitations.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleDeleteBoard()}
+              disabled={deleteBoardMutation.isPending}
+              className="mt-4 rounded-full border border-rose-200 px-4 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            >
+              {deleteBoardMutation.isPending ? "Deleting..." : "Delete board"}
+            </button>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

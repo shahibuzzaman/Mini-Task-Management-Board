@@ -71,6 +71,7 @@ export async function POST(request: Request) {
 
     const { data: boardId, error } = await supabase.rpc("create_board_with_owner", {
       target_name: parsed.data.name,
+      target_description: parsed.data.description,
     });
 
     if (error || !boardId) {

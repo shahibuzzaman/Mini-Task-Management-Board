@@ -8,12 +8,17 @@ import type { Task } from "@/features/tasks/types/task";
 
 type SortableTaskCardProps = {
   task: Task;
+  disabled?: boolean;
 };
 
-function SortableTaskCardComponent({ task }: SortableTaskCardProps) {
+function SortableTaskCardComponent({
+  task,
+  disabled = false,
+}: SortableTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
       id: task.id,
+      disabled,
       data: {
         type: "task",
         taskId: task.id,
@@ -32,6 +37,7 @@ function SortableTaskCardComponent({ task }: SortableTaskCardProps) {
     >
       <TaskCard
         task={task}
+        isReadOnly={disabled}
         dragHandleProps={{
           ...attributes,
           ...listeners,

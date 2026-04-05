@@ -51,6 +51,7 @@ export function TaskBoard({
   errorMessage,
 }: TaskBoardProps) {
   const moveTaskMutation = useMoveTaskMutation(board.id, viewer);
+  const isReadOnly = board.archivedAt !== null;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -86,10 +87,18 @@ export function TaskBoard({
   }
 
   function handleDragStart(event: DragStartEvent) {
+    if (isReadOnly) {
+      return;
+    }
+
     setActiveTaskId(String(event.active.id));
   }
 
   function handleDragOver(event: DragOverEvent) {
+    if (isReadOnly) {
+      return;
+    }
+
     if (!event.over) {
       return;
     }
@@ -120,6 +129,12 @@ export function TaskBoard({
   }
 
   async function handleDragEnd(event: DragEndEvent) {
+    if (isReadOnly) {
+      setActiveTaskId(null);
+      setProjectedTasks(null);
+      return;
+    }
+
     const nextTasks = projectedTasks ?? tasks;
 
     setActiveTaskId(null);
@@ -191,6 +206,12 @@ export function TaskBoard({
               are enforced server-side through authenticated route handlers and
               database policies.
             </p>
+            {board.archivedAt ? (
+              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                This board is archived. Tasks are visible, but create, edit, and
+                drag actions are disabled until an owner unarchives it.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
             <p className="text-sm text-slate-500">
@@ -199,7 +220,14 @@ export function TaskBoard({
                 {viewer.displayName}
               </span>
             </p>
-            <TaskBoardActions />
+            <TaskBoardActions
+              disabled={isReadOnly}
+              disabledReason={
+                isReadOnly
+                  ? "Archived boards are read-only."
+                  : "Configure Supabase first"
+              }
+            />
           </div>
         </div>
 
@@ -219,13 +247,16 @@ export function TaskBoard({
               title={column.title}
               tasks={tasksByStatus[column.status]}
               isDragging={activeTaskId !== null}
+              isReadOnly={isReadOnly}
             />
           ))}
         </div>
       </section>
 
       <DragOverlay>
-        {activeTask ? <TaskCard task={activeTask} isDragOverlay /> : null}
+        {activeTask ? (
+          <TaskCard task={activeTask} isDragOverlay isReadOnly={isReadOnly} />
+        ) : null}
       </DragOverlay>
     </DndContext>
   );
