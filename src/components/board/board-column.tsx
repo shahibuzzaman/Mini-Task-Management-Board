@@ -1,5 +1,7 @@
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { BoardColumnDropZone } from "@/components/board/board-column-drop-zone";
 import { BoardEmptyState } from "@/components/board/board-empty-state";
-import { TaskCard } from "@/components/board/task-card";
+import { SortableTaskCard } from "@/components/board/sortable-task-card";
 import type { Task, TaskStatus } from "@/features/tasks/types/task";
 
 type BoardColumnProps = {
@@ -25,16 +27,21 @@ export function BoardColumn({ title, status, tasks }: BoardColumnProps) {
         </span>
       </header>
 
-      <div className="flex flex-1 flex-col gap-3">
-        {tasks.length > 0 ? (
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)
-        ) : (
-          <BoardEmptyState
-            title={`No ${title.toLowerCase()} tasks`}
-            description="Tasks will appear here when records for this status are available."
-          />
-        )}
-      </div>
+      <BoardColumnDropZone status={status}>
+        <SortableContext
+          items={tasks.map((task) => task.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {tasks.length > 0 ? (
+            tasks.map((task) => <SortableTaskCard key={task.id} task={task} />)
+          ) : (
+            <BoardEmptyState
+              title={`No ${title.toLowerCase()} tasks`}
+              description="Tasks will appear here when records for this status are available."
+            />
+          )}
+        </SortableContext>
+      </BoardColumnDropZone>
     </section>
   );
 }

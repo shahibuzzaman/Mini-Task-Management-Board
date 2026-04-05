@@ -1,6 +1,4 @@
-import type { Task, TaskGroupMap, TaskStatus } from "@/features/tasks/types/task";
-
-const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "done"];
+import type { Task, TaskGroupMap } from "@/features/tasks/types/task";
 
 export function groupTasksByStatus(tasks: Task[]): TaskGroupMap {
   const groups: TaskGroupMap = {
@@ -9,10 +7,8 @@ export function groupTasksByStatus(tasks: Task[]): TaskGroupMap {
     done: [],
   };
 
-  for (const status of TASK_STATUSES) {
-    groups[status] = tasks
-      .filter((task) => task.status === status)
-      .sort((left, right) => left.position - right.position);
+  for (const task of tasks) {
+    groups[task.status].push(task);
   }
 
   return groups;

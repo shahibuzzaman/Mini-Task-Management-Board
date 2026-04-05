@@ -5,24 +5,42 @@ import { useUIStore } from "@/store/ui-store-provider";
 
 type TaskCardProps = {
   task: Task;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  isDragOverlay?: boolean;
 };
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({
+  task,
+  dragHandleProps,
+  isDragOverlay = false,
+}: TaskCardProps) {
   const openEditTaskForm = useUIStore((state) => state.openEditTaskForm);
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <article className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-          {getVisibleTaskId(task.id)}
-        </p>
-        <button
-          type="button"
-          onClick={() => openEditTaskForm(task.id)}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-white"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={`Drag ${task.title}`}
+            className="rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-white"
+            {...dragHandleProps}
+          >
+            ::
+          </button>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            {getVisibleTaskId(task.id)}
+          </p>
+        </div>
+        {!isDragOverlay ? (
+          <button
+            type="button"
+            onClick={() => openEditTaskForm(task.id)}
+            className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-white"
+          >
+            Edit
+          </button>
+        ) : null}
       </div>
       <h3 className="mt-2 text-base font-semibold text-slate-900">
         {task.title}
