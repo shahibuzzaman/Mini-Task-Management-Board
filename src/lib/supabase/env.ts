@@ -19,8 +19,12 @@ export type SupabaseBrowserConfig =
       missingEnvVars: RequiredBrowserEnvVar[];
     };
 
-function readEnvValue(name: RequiredBrowserEnvVar): string {
-  return process.env[name]?.trim() ?? "";
+function getSupabaseUrlEnvValue(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+}
+
+function getSupabaseAnonKeyEnvValue(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
 }
 
 function isValidUrl(value: string): boolean {
@@ -39,8 +43,8 @@ export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
     return browserSupabaseConfig;
   }
 
-  const url = readEnvValue("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey = readEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const url = getSupabaseUrlEnvValue();
+  const anonKey = getSupabaseAnonKeyEnvValue();
 
   const missingEnvVars = REQUIRED_BROWSER_ENV_VARS.filter((envVarName) => {
     if (envVarName === "NEXT_PUBLIC_SUPABASE_URL") {
