@@ -1,9 +1,11 @@
 "use client";
 
+import { useHasMounted } from "@/components/board/use-has-mounted";
 import { SIMULATED_USERS, type SimulatedUser } from "@/store/ui-store";
 import { useUIStore } from "@/store/ui-store-provider";
 
 export function SimulatedUserSwitcher() {
+  const hasMounted = useHasMounted();
   const activeUser = useUIStore((state) => state.activeUser);
   const setActiveUser = useUIStore((state) => state.setActiveUser);
 
@@ -25,7 +27,7 @@ export function SimulatedUserSwitcher() {
             <UserButton
               key={user}
               user={user}
-              isActive={user === activeUser}
+              isActive={hasMounted && user === activeUser}
               onSelect={setActiveUser}
             />
           ))}

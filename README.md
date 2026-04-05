@@ -48,6 +48,8 @@ src/
   store/
   types/
 supabase/
+  config.toml
+  migrations/
   schema.sql
   seed.sql
 docs/
@@ -235,6 +237,12 @@ npm run dev
 
 ### Push Migrations To A Remote Supabase Project
 
+Authenticate the Supabase CLI first:
+
+```bash
+npx supabase login
+```
+
 Link the repo to your remote project:
 
 ```bash
@@ -284,6 +292,12 @@ npm run db:start
 npm run db:reset
 npm run dev
 ```
+
+If you want to use your hosted Supabase project instead of the local CLI stack:
+
+1. Set `.env.local`
+2. Apply the schema and seed
+3. Run `npm run dev`
 
 Validation:
 

@@ -20,6 +20,7 @@ import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { TaskCard } from "@/components/board/task-card";
+import { useHasMounted } from "@/components/board/use-has-mounted";
 import { useMoveTaskMutation } from "@/features/tasks/hooks/use-move-task-mutation";
 import { getDragDestination } from "@/features/tasks/lib/get-drag-destination";
 import { getDragMovePayload } from "@/features/tasks/lib/get-drag-move-payload";
@@ -37,6 +38,7 @@ type FeedbackState = {
 } | null;
 
 export function TaskBoard() {
+  const hasMounted = useHasMounted();
   const supabaseConfig = getSupabaseBrowserConfig();
   const activeUser = useUIStore((state) => state.activeUser);
   const tasksQuery = useTasksQuery();
@@ -66,6 +68,10 @@ export function TaskBoard() {
     () => resolvedTasks.find((task) => task.id === activeTaskId),
     [activeTaskId, resolvedTasks],
   );
+
+  if (!hasMounted) {
+    return <BoardLoadingState />;
+  }
 
   if (!supabaseConfig.isConfigured) {
     return (
