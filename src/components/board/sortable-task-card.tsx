@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { TaskCard } from "@/components/board/task-card";
@@ -9,7 +10,7 @@ type SortableTaskCardProps = {
   task: Task;
 };
 
-export function SortableTaskCard({ task }: SortableTaskCardProps) {
+function SortableTaskCardComponent({ task }: SortableTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
       id: task.id,
@@ -39,3 +40,5 @@ export function SortableTaskCard({ task }: SortableTaskCardProps) {
     </div>
   );
 }
+
+export const SortableTaskCard = memo(SortableTaskCardComponent);

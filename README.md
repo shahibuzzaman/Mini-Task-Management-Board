@@ -5,9 +5,11 @@ with:
 
 - Supabase Auth with cookie-backed SSR sessions
 - a protected shared board
+- owner/member role management for the shared board
 - create, edit, reorder, and cross-column task moves
 - optimistic UI for mutations
 - realtime sync across signed-in users
+- targeted render optimizations for larger task sets
 - strict separation between UI state and server state
 
 ## Architecture Overview
@@ -34,6 +36,7 @@ Level Security remains the source of truth for access control.
 src/
   app/
     api/
+      board-members/
       tasks/
     auth/
       callback/
@@ -52,7 +55,10 @@ src/
       lib/
       types/
     boards/
+      api/
+      hooks/
       lib/
+      query-keys.ts
       types/
     tasks/
       api/
@@ -70,6 +76,7 @@ supabase/
   migrations/
   schema.sql
   seed.sql
+  seed.large.sql
 docs/
   demo-script.md
   release-checklist.md
@@ -78,7 +85,7 @@ docs/
 Structure rules:
 
 - `features/auth`: auth forms, auth helpers, and viewer types
-- `features/boards`: current shared-board bootstrap and board metadata helpers
+- `features/boards`: shared-board bootstrap, membership APIs, hooks, and board metadata helpers
 - `features/tasks/api`: client-side fetchers for authenticated app APIs
 - `features/tasks/hooks`: TanStack Query hooks and realtime wiring
 - `features/tasks/lib`: ordering helpers, task mapping, optimistic cache helpers
@@ -153,6 +160,7 @@ The authenticated model uses:
 ```sql
 id uuid primary key references auth.users(id) on delete cascade
 display_name text
+email text not null unique
 created_at timestamptz not null
 updated_at timestamptz not null
 ```
@@ -214,6 +222,7 @@ Helper database functions:
 - `public.is_board_member(uuid)`
 - `public.is_board_owner(uuid)`
 - `public.ensure_current_user_shared_board()`
+- `public.lookup_board_member_candidate(uuid, text)`
 
 The current product surface exposes a single shared board. On first authenticated
 access, the app ensures:
@@ -222,6 +231,13 @@ access, the app ensures:
 2. a shared board exists
 3. the user is a member of that board
 4. initial sample tasks exist if the board is empty
+
+The board now also exposes a minimal membership management surface:
+
+- `owner` can add members by email
+- `owner` can promote or demote members
+- `owner` can remove members
+- `member` can see the member list but cannot manage it
 
 ## Route Protection
 
@@ -237,6 +253,10 @@ This is intentionally not client-only protection.
 
 Task reads and writes now go through authenticated Next route handlers:
 
+- `GET /api/board-members`
+- `POST /api/board-members`
+- `PATCH /api/board-members/[userId]`
+- `DELETE /api/board-members/[userId]`
 - `GET /api/tasks`
 - `POST /api/tasks`
 - `PATCH /api/tasks/[taskId]`
@@ -275,6 +295,29 @@ Rules:
 
 This avoids full-column rewrites for common moves while keeping the logic easy
 to explain.
+
+## Performance Approach
+
+Performance work in this repo is intentionally scoped, not speculative.
+
+Implemented:
+
+- `TaskCard` remains memoized
+- `BoardColumn` uses memoization with a focused prop comparator so unaffected
+  columns can skip rerendering when another column changes
+- `SortableTaskCard` is memoized
+- the board now shares a single tasks query subscription between the shell and
+  the drag surface instead of subscribing twice
+- [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql)
+  provides an optional larger dataset for render and drag/drop smoke testing
+
+Not implemented:
+
+- virtualization
+
+The current task counts do not justify the added complexity of virtualization,
+so the performance pass stays focused on stable props, reduced subscriptions,
+and clear memo boundaries.
 
 ## Optimistic UI Approach
 
@@ -332,6 +375,12 @@ npm run dev
 7. The first authenticated visit to `/board` will create the shared board,
    membership, and starter tasks
 
+Optional performance dataset:
+
+- after the shared board exists, run
+  [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql)
+  to add 180 extra tasks for performance testing
+
 ### Supabase CLI Workflow
 
 ```bash
@@ -386,6 +435,7 @@ npm run test
 6. Sign up for a real user in production.
 7. Verify:
    - auth works
+   - owner/member management works
    - `/board` is protected
    - create/edit/move work
    - realtime works across two signed-in sessions
@@ -394,20 +444,21 @@ npm run test
 
 - The current UI exposes one authenticated shared board, not a multi-board
   switcher.
-- Membership management is intentionally conservative and not exposed in the
-  UI yet.
+- Membership management is intentionally conservative and limited to the shared
+  board.
 - Delete is still not implemented.
 - Realtime handles inserts and updates; delete handling is still omitted.
 - Midpoint ordering still does not include a rebalance job for dense gaps.
-- There is no MFA, SSO, admin tooling, or advanced RBAC in this pass.
+- There is no MFA, SSO, invitation email flow, admin tooling, or advanced RBAC
+  in this pass.
 
 ## What Was Intentionally Not Built
 
 - enterprise auth features
 - MFA
 - SSO
-- admin membership tooling
-- board invitation flows
+- board invitation email flow
+- multi-board management UI
 - role escalation flows beyond `owner` and `member`
 - delete flow
 - full conflict resolution for concurrent edits

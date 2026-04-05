@@ -28,7 +28,6 @@ import { getDragMovePayload } from "@/features/tasks/lib/get-drag-move-payload";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
 import { projectDraggedTasks } from "@/features/tasks/lib/project-dragged-tasks";
-import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
 import type { Task } from "@/features/tasks/types/task";
 
 type FeedbackState = {
@@ -39,10 +38,18 @@ type FeedbackState = {
 type TaskBoardProps = {
   board: BoardSummary;
   viewer: AuthViewer;
+  tasks: Task[];
+  isLoading: boolean;
+  errorMessage: string | null;
 };
 
-export function TaskBoard({ board, viewer }: TaskBoardProps) {
-  const tasksQuery = useTasksQuery(board.id);
+export function TaskBoard({
+  board,
+  viewer,
+  tasks,
+  isLoading,
+  errorMessage,
+}: TaskBoardProps) {
   const moveTaskMutation = useMoveTaskMutation(board.id, viewer);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
@@ -58,8 +65,8 @@ export function TaskBoard({ board, viewer }: TaskBoardProps) {
     }),
   );
   const resolvedTasks = useMemo(
-    () => projectedTasks ?? tasksQuery.data ?? [],
-    [projectedTasks, tasksQuery.data],
+    () => projectedTasks ?? tasks,
+    [projectedTasks, tasks],
   );
   const tasksByStatus = useMemo(
     () => groupTasksByStatus(resolvedTasks),
@@ -70,12 +77,12 @@ export function TaskBoard({ board, viewer }: TaskBoardProps) {
     [activeTaskId, resolvedTasks],
   );
 
-  if (tasksQuery.isLoading) {
+  if (isLoading) {
     return <BoardLoadingState />;
   }
 
-  if (tasksQuery.isError) {
-    return <BoardErrorState message={tasksQuery.error.message} />;
+  if (errorMessage) {
+    return <BoardErrorState message={errorMessage} />;
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -87,7 +94,7 @@ export function TaskBoard({ board, viewer }: TaskBoardProps) {
       return;
     }
 
-    const baseTasks = projectedTasks ?? tasksQuery.data ?? [];
+    const baseTasks = projectedTasks ?? tasks;
     const destination = getDragDestination(baseTasks, event);
 
     if (!destination) {
@@ -113,7 +120,7 @@ export function TaskBoard({ board, viewer }: TaskBoardProps) {
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    const nextTasks = projectedTasks ?? tasksQuery.data ?? [];
+    const nextTasks = projectedTasks ?? tasks;
 
     setActiveTaskId(null);
 
@@ -133,9 +140,7 @@ export function TaskBoard({ board, viewer }: TaskBoardProps) {
       return;
     }
 
-    const originalTask = (tasksQuery.data ?? []).find(
-      (task) => task.id === movePayload.id,
-    );
+    const originalTask = tasks.find((task) => task.id === movePayload.id);
 
     if (
       originalTask &&

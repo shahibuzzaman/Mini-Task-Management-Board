@@ -1,6 +1,7 @@
 import { AccountSummary } from "@/features/auth/components/account-summary";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
+import { BoardMembersPanel } from "@/components/board/board-members-panel";
 import { TaskBoardShell } from "@/components/board/task-board-shell";
 
 type BoardPageShellProps = {
@@ -26,8 +27,14 @@ export function BoardPageShell({ viewer, board }: BoardPageShellProps) {
           </p>
         </header>
 
-        <AccountSummary viewer={viewer} />
-        <TaskBoardShell board={board} viewer={viewer} />
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+          <TaskBoardShell board={board} viewer={viewer} />
+
+          <aside className="space-y-6">
+            <AccountSummary viewer={viewer} />
+            <BoardMembersPanel board={board} viewer={viewer} />
+          </aside>
+        </div>
       </div>
     </main>
   );

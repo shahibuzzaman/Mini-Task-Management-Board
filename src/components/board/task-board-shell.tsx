@@ -107,7 +107,13 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
           onDismiss={() => setFeedback(null)}
         />
       ) : null}
-      <TaskBoard board={board} viewer={viewer} />
+      <TaskBoard
+        board={board}
+        viewer={viewer}
+        tasks={tasksQuery.data ?? []}
+        isLoading={tasksQuery.isLoading}
+        errorMessage={tasksQuery.isError ? tasksQuery.error.message : null}
+      />
       <TaskFormModal
         mode={editingTask ? "edit" : "create"}
         task={editingTask}

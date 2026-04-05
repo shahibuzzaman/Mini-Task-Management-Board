@@ -15,6 +15,7 @@
 - RLS is enabled on all four tables
 - no demo-open anon task policies remain on the authenticated tables
 - Realtime is enabled for `public.tasks`
+- [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql) is available for optional performance testing
 
 ## Auth Setup
 
@@ -28,6 +29,7 @@
 - [seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql) has been applied if using CLI reset flow
 - understand that starter task data is created on first authenticated board access, not as anonymous SQL inserts
 - a signed-in user sees a shared board and starter tasks
+- run [seed.large.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.large.sql) after first sign-in if you want a larger render/drag dataset
 
 ## Validation
 
@@ -44,12 +46,15 @@
 - log in works
 - `/board` is protected
 - account card shows display name and email
+- owner sees board-members management controls
+- member does not see board-members management controls
 - board renders all 3 columns
 - create task works
 - edit task works
 - drag within a column works
 - drag across columns works
 - realtime updates appear in another signed-in tab without refresh
+- board remains responsive after loading the large performance seed
 
 ## Vercel Deploy Checks
 
@@ -68,6 +73,7 @@
 - show sign in or sign up
 - show protected redirect into `/board`
 - show account UI
+- show owner/member access difference
 - show create flow
 - show edit flow
 - show drag/drop reorder

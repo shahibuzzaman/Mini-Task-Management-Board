@@ -16,18 +16,21 @@ export type Database = {
         Row: {
           id: string;
           display_name: string | null;
+          email: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
           display_name?: string | null;
+          email: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           display_name?: string | null;
+          email?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -123,6 +126,17 @@ export type Database = {
       ensure_current_user_shared_board: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      lookup_board_member_candidate: {
+        Args: {
+          target_board_id: string;
+          target_email: string;
+        };
+        Returns: {
+          id: string;
+          display_name: string | null;
+          email: string;
+        }[];
       };
     };
     Enums: Record<string, never>;

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { BoardColumnDropZone } from "@/components/board/board-column-drop-zone";
 import { BoardEmptyState } from "@/components/board/board-empty-state";
@@ -12,6 +12,8 @@ type BoardColumnProps = {
 };
 
 function BoardColumnComponent({ title, status, tasks }: BoardColumnProps) {
+  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+
   return (
     <section className="flex min-h-80 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <header className="mb-4 flex items-center justify-between">
@@ -29,10 +31,7 @@ function BoardColumnComponent({ title, status, tasks }: BoardColumnProps) {
       </header>
 
       <BoardColumnDropZone status={status}>
-        <SortableContext
-          items={tasks.map((task) => task.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.length > 0 ? (
             tasks.map((task) => <SortableTaskCard key={task.id} task={task} />)
           ) : (
@@ -47,4 +46,28 @@ function BoardColumnComponent({ title, status, tasks }: BoardColumnProps) {
   );
 }
 
-export const BoardColumn = memo(BoardColumnComponent);
+export const BoardColumn = memo(BoardColumnComponent, areBoardColumnPropsEqual);
+
+function areBoardColumnPropsEqual(
+  previousProps: BoardColumnProps,
+  nextProps: BoardColumnProps,
+) {
+  if (
+    previousProps.title !== nextProps.title ||
+    previousProps.status !== nextProps.status ||
+    previousProps.tasks.length !== nextProps.tasks.length
+  ) {
+    return false;
+  }
+
+  return previousProps.tasks.every((task, index) => {
+    const nextTask = nextProps.tasks[index];
+
+    return (
+      task.id === nextTask?.id &&
+      task.position === nextTask.position &&
+      task.status === nextTask.status &&
+      task.updatedAt === nextTask.updatedAt
+    );
+  });
+}

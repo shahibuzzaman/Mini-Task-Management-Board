@@ -47,6 +47,7 @@ empty."
 Show:
 
 - account card with display name and email
+- board members panel with visible roles
 - protected board shell
 - three columns with tasks
 
@@ -54,6 +55,20 @@ Say:
 
 "Zustand now stores only modal and editing UI state. TanStack Query owns the
 task list and mutations. Auth state comes from Supabase, not from Zustand."
+
+## Role-Based Access
+
+Show:
+
+1. the members panel
+2. current user role
+3. owner-only add / role change / remove controls
+
+Say:
+
+"The shared board has two roles: `owner` and `member`. Owners can manage
+membership. Members can collaborate on tasks but cannot manage access. Those
+rules are enforced in both the route handlers and the database policies."
 
 ## Create And Edit
 
@@ -109,9 +124,9 @@ server."
 Say:
 
 "For this pass, I kept the product as a single shared authenticated board. I
-did not add invitations, admin tooling, MFA, SSO, or membership management UI.
-The goal was a strong first production-shaped auth pass without rewriting the
-existing app."
+did not add invite emails, admin tooling, MFA, SSO, or a multi-board dashboard.
+The goal was a strong production-shaped auth pass without rewriting the
+existing app or overbuilding collaboration management."
 
 ## Closing
 

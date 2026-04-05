@@ -23,6 +23,7 @@ $$;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
+  email text not null unique,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -79,17 +80,19 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
+  insert into public.profiles (id, display_name, email)
   values (
     new.id,
     coalesce(
       nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
       split_part(new.email, '@', 1)
-    )
+    ),
+    lower(new.email)
   )
   on conflict (id) do update
   set
-    display_name = coalesce(public.profiles.display_name, excluded.display_name),
+    display_name = excluded.display_name,
+    email = excluded.email,
     updated_at = timezone('utc', now());
 
   return new;
@@ -182,6 +185,36 @@ as $$
   );
 $$;
 
+create or replace function public.lookup_board_member_candidate(
+  target_board_id uuid,
+  target_email text
+)
+returns table (
+  id uuid,
+  display_name text,
+  email text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authenticated user required.';
+  end if;
+
+  if not public.is_board_owner(target_board_id) then
+    raise exception 'Only board owners can add members.';
+  end if;
+
+  return query
+  select profiles.id, profiles.display_name, profiles.email
+  from public.profiles
+  where lower(profiles.email) = lower(trim(target_email))
+  limit 1;
+end;
+$$;
+
 create or replace function public.ensure_current_user_shared_board()
 returns uuid
 language plpgsql
@@ -198,8 +231,11 @@ begin
     raise exception 'Authenticated user required.';
   end if;
 
-  insert into public.profiles (id)
-  values (current_user_id)
+  insert into public.profiles (id, email)
+  values (
+    current_user_id,
+    lower((select users.email from auth.users as users where users.id = current_user_id))
+  )
   on conflict (id) do nothing;
 
   select id
