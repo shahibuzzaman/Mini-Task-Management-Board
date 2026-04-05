@@ -5,6 +5,7 @@ import { TaskFormModal } from "@/components/board/task-form-modal";
 import { TaskBoard } from "@/components/board/task-board";
 import { useCreateTaskMutation } from "@/features/tasks/hooks/use-create-task-mutation";
 import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
+import { useTasksRealtimeSync } from "@/features/tasks/hooks/use-tasks-realtime-sync";
 import { useUpdateTaskMutation } from "@/features/tasks/hooks/use-update-task-mutation";
 import { getNextTaskPosition } from "@/features/tasks/lib/get-next-task-position";
 import type { TaskFormValues } from "@/features/tasks/types/task-form";
@@ -18,6 +19,8 @@ export function TaskBoardShell() {
   const tasksQuery = useTasksQuery();
   const createTaskMutation = useCreateTaskMutation();
   const updateTaskMutation = useUpdateTaskMutation();
+
+  useTasksRealtimeSync();
 
   const editingTask = useMemo(() => {
     if (!editingTaskId) {

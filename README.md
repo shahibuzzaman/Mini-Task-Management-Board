@@ -26,6 +26,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 If those env vars are missing, the app stays bootable and renders a setup-state
 message instead of throwing at import time.
 
+## Realtime Notes
+
+Supabase Realtime is subscribed only once from the task board shell and listens
+for `INSERT` and `UPDATE` events on `public.tasks`.
+
+- Incoming realtime rows are mapped into the TanStack Query tasks cache when the
+  list is already present.
+- If the list cache is not ready yet, the app falls back to invalidating the
+  tasks query instead of trying to assemble a partial view.
+- Local create, edit, and move mutations also patch the same cache path, so a
+  later realtime event usually becomes an idempotent replace rather than a
+  visible double-apply.
+
+This keeps the server as the source of truth without adding heavy conflict
+resolution logic for the take-home.
+
 ## Demo Policy Note
 
 The SQL schema includes demo-only anonymous policies for `select`, `insert`,
