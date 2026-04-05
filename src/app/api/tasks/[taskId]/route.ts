@@ -7,6 +7,7 @@ import {
   type TaskRecord,
 } from "@/features/tasks/lib/map-task-row-to-task";
 import { updateTaskRouteSchema } from "@/features/tasks/lib/task-route-schemas";
+import { validateTaskAssignee } from "@/features/tasks/lib/validate-task-assignee";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const TASK_SELECT = `
@@ -15,11 +16,16 @@ const TASK_SELECT = `
   title,
   description,
   status,
+  priority,
+  due_at,
+  labels,
+  assignee_id,
   position,
   updated_by,
   created_at,
   updated_at,
-  updated_by_profile:profiles!tasks_updated_by_fkey(display_name)
+  updated_by_profile:profiles!tasks_updated_by_fkey(display_name),
+  assignee_profile:profiles!tasks_assignee_id_fkey(display_name)
 `;
 
 const taskIdSchema = z.uuid("Invalid task identifier.");
@@ -78,10 +84,24 @@ export async function PATCH(request: Request, context: TaskRouteContext) {
     }
 
     await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
+    await validateTaskAssignee(
+      supabase,
+      parsedBoardId.data,
+      parsedBody.data.assigneeId ?? null,
+    );
 
     const { data, error } = await supabase
       .from("tasks")
-      .update(parsedBody.data)
+      .update({
+        title: parsedBody.data.title,
+        description: parsedBody.data.description,
+        status: parsedBody.data.status,
+        priority: parsedBody.data.priority,
+        due_at: parsedBody.data.dueAt,
+        labels: parsedBody.data.labels,
+        assignee_id: parsedBody.data.assigneeId,
+        position: parsedBody.data.position,
+      })
       .eq("id", parsedTaskId.data)
       .eq("board_id", parsedBoardId.data)
       .select(TASK_SELECT)

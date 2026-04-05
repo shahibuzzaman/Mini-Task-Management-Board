@@ -1,6 +1,8 @@
 "use client";
 
 import { memo } from "react";
+import { formatTaskDueAt } from "@/features/tasks/lib/task-metadata";
+import { getTaskPriorityTone } from "@/features/tasks/lib/task-priority";
 import type { Task } from "@/features/tasks/types/task";
 import { useUIStore } from "@/store/ui-store-provider";
 
@@ -18,6 +20,7 @@ function TaskCardComponent({
   isReadOnly = false,
 }: TaskCardProps) {
   const openEditTaskForm = useUIStore((state) => state.openEditTaskForm);
+  const dueAtLabel = formatTaskDueAt(task.dueAt);
 
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
@@ -49,7 +52,38 @@ function TaskCardComponent({
       <h3 className="mt-2 text-base font-semibold text-slate-900">
         {task.title}
       </h3>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span
+          className={`rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] ${getTaskPriorityTone(
+            task.priority,
+          )}`}
+        >
+          {task.priority}
+        </span>
+        {task.assigneeName ? (
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700">
+            Assignee: {task.assigneeName}
+          </span>
+        ) : null}
+        {dueAtLabel ? (
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700">
+            Due {dueAtLabel}
+          </span>
+        ) : null}
+      </div>
       <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
+      {task.labels.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {task.labels.map((label) => (
+            <span
+              key={label}
+              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700"
+            >
+              #{label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
         Updated by {task.updatedByName}
       </p>

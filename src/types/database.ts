@@ -8,6 +8,7 @@ export type Json =
 
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type BoardRole = "owner" | "admin" | "member";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type BoardAccentColor =
   | "sky"
   | "emerald"
@@ -111,6 +112,10 @@ export type Database = {
           title: string;
           description: string;
           status: TaskStatus;
+          priority: TaskPriority;
+          due_at: string | null;
+          labels: string[];
+          assignee_id: string | null;
           position: number;
           created_by: string;
           updated_by: string;
@@ -123,6 +128,10 @@ export type Database = {
           title: string;
           description?: string;
           status?: TaskStatus;
+          priority?: TaskPriority;
+          due_at?: string | null;
+          labels?: string[];
+          assignee_id?: string | null;
           position: number;
           created_by?: string;
           updated_by?: string;
@@ -135,11 +144,72 @@ export type Database = {
           title?: string;
           description?: string;
           status?: TaskStatus;
+          priority?: TaskPriority;
+          due_at?: string | null;
+          labels?: string[];
+          assignee_id?: string | null;
           position?: number;
           created_by?: string;
           updated_by?: string;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      task_comments: {
+        Row: {
+          id: string;
+          task_id: string;
+          body: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          body: string;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          body?: string;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      task_attachments: {
+        Row: {
+          id: string;
+          task_id: string;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+          uploaded_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          storage_path?: string;
+          file_name?: string;
+          mime_type?: string;
+          size_bytes?: number;
+          uploaded_by?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

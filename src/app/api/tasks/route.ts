@@ -6,6 +6,7 @@ import {
   type TaskRecord,
 } from "@/features/tasks/lib/map-task-row-to-task";
 import { createTaskRouteSchema } from "@/features/tasks/lib/task-route-schemas";
+import { validateTaskAssignee } from "@/features/tasks/lib/validate-task-assignee";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const TASK_SELECT = `
@@ -14,11 +15,16 @@ const TASK_SELECT = `
   title,
   description,
   status,
+  priority,
+  due_at,
+  labels,
+  assignee_id,
   position,
   updated_by,
   created_at,
   updated_at,
-  updated_by_profile:profiles!tasks_updated_by_fkey(display_name)
+  updated_by_profile:profiles!tasks_updated_by_fkey(display_name),
+  assignee_profile:profiles!tasks_assignee_id_fkey(display_name)
 `;
 
 export async function GET(request: Request) {
@@ -104,6 +110,11 @@ export async function POST(request: Request) {
     }
 
     await getCurrentBoardAccess(supabase, user.id, parsed.data.boardId);
+    await validateTaskAssignee(
+      supabase,
+      parsed.data.boardId,
+      parsed.data.assigneeId,
+    );
     const { data, error } = await supabase
       .from("tasks")
       .insert({
@@ -111,6 +122,10 @@ export async function POST(request: Request) {
         title: parsed.data.title,
         description: parsed.data.description,
         status: parsed.data.status,
+        priority: parsed.data.priority,
+        due_at: parsed.data.dueAt,
+        labels: parsed.data.labels,
+        assignee_id: parsed.data.assigneeId,
         position: parsed.data.position,
       })
       .select(TASK_SELECT)

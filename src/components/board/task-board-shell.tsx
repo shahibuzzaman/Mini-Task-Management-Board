@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
+import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TaskFormModal } from "@/components/board/task-form-modal";
 import { TaskBoard } from "@/components/board/task-board";
@@ -11,7 +12,7 @@ import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
 import { useTasksRealtimeSync } from "@/features/tasks/hooks/use-tasks-realtime-sync";
 import { useUpdateTaskMutation } from "@/features/tasks/hooks/use-update-task-mutation";
 import { getNextTaskPosition } from "@/features/tasks/lib/get-next-task-position";
-import type { TaskFormValues } from "@/features/tasks/types/task-form";
+import type { TaskMutationInput } from "@/features/tasks/types/task-form";
 import { useUIStore } from "@/store/ui-store-provider";
 
 type FeedbackState = {
@@ -29,6 +30,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const editingTaskId = useUIStore((state) => state.editingTaskId);
   const closeTaskForm = useUIStore((state) => state.closeTaskForm);
   const tasksQuery = useTasksQuery(board.id);
+  const membersQuery = useBoardMembersQuery(board.id);
   const createTaskMutation = useCreateTaskMutation(board.id, viewer);
   const updateTaskMutation = useUpdateTaskMutation(board.id, viewer);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -46,7 +48,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const errorMessage =
     createTaskMutation.error?.message ?? updateTaskMutation.error?.message;
 
-  async function handleSubmit(values: TaskFormValues) {
+  async function handleSubmit(values: TaskMutationInput) {
     setFeedback(null);
     createTaskMutation.reset();
     updateTaskMutation.reset();
@@ -66,6 +68,10 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
           title: values.title,
           description: values.description,
           status: values.status,
+          priority: values.priority,
+          dueAt: values.dueAt,
+          labels: values.labels,
+          assigneeId: values.assigneeId,
           position,
         });
         closeTaskForm();
@@ -82,6 +88,10 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         title: values.title,
         description: values.description,
         status: values.status,
+        priority: values.priority,
+        dueAt: values.dueAt,
+        labels: values.labels,
+        assigneeId: values.assigneeId,
         position,
       });
       closeTaskForm();
@@ -115,9 +125,12 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         errorMessage={tasksQuery.isError ? tasksQuery.error.message : null}
       />
       <TaskFormModal
+        key={`${editingTask?.id ?? "create"}-${isTaskFormOpen ? "open" : "closed"}`}
         mode={editingTask ? "edit" : "create"}
         task={editingTask}
         isOpen={isTaskFormOpen}
+        boardId={board.id}
+        members={membersQuery.data ?? []}
         isPending={
           createTaskMutation.isPending || updateTaskMutation.isPending
         }

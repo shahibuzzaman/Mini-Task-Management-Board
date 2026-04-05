@@ -1,32 +1,84 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { BoardErrorState } from "@/components/board/board-error-state";
+import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
-import { taskFormSchema, type TaskFormSchema } from "@/features/tasks/lib/task-form-schema";
+import {
+  formatTaskAttachmentSize,
+  formatTaskDueAt,
+  formatTaskLabels,
+  normalizeTaskDueAt,
+  parseTaskLabels,
+  toTaskDueAtInputValue,
+} from "@/features/tasks/lib/task-metadata";
+import {
+  taskFormSchema,
+  type TaskFormSchema,
+} from "@/features/tasks/lib/task-form-schema";
+import { TASK_PRIORITIES } from "@/features/tasks/lib/task-priority";
+import { useCreateTaskCommentMutation } from "@/features/tasks/hooks/use-create-task-comment-mutation";
+import { useDeleteTaskAttachmentMutation } from "@/features/tasks/hooks/use-delete-task-attachment-mutation";
+import { useTaskDetailsQuery } from "@/features/tasks/hooks/use-task-details-query";
+import { useUploadTaskAttachmentMutation } from "@/features/tasks/hooks/use-upload-task-attachment-mutation";
 import type { Task } from "@/features/tasks/types/task";
-import type { TaskFormValues } from "@/features/tasks/types/task-form";
+import type {
+  TaskEditorValues,
+  TaskMutationInput,
+} from "@/features/tasks/types/task-form";
+import type { BoardMember } from "@/features/boards/types/board-member";
 
 type TaskFormModalProps = {
+  boardId: string;
   mode: "create" | "edit";
   task?: Task;
+  members: BoardMember[];
   isOpen: boolean;
   isPending: boolean;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: TaskFormValues) => Promise<void>;
+  onSubmit: (values: TaskMutationInput) => Promise<void>;
 };
 
-const DEFAULT_VALUES: TaskFormValues = {
+type FeedbackState = {
+  kind: "success" | "error";
+  message: string;
+} | null;
+
+const DEFAULT_VALUES: TaskEditorValues = {
   title: "",
   description: "",
   status: "todo",
+  priority: "medium",
+  dueAt: "",
+  labels: "",
+  assigneeId: "",
 };
 
+function getInitialValues(task?: Task): TaskEditorValues {
+  if (!task) {
+    return DEFAULT_VALUES;
+  }
+
+  return {
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    dueAt: toTaskDueAtInputValue(task.dueAt),
+    labels: formatTaskLabels(task.labels),
+    assigneeId: task.assigneeId ?? "",
+  };
+}
+
 export function TaskFormModal({
+  boardId,
   mode,
   task,
+  members,
   isOpen,
   isPending,
   errorMessage,
@@ -36,27 +88,39 @@ export function TaskFormModal({
   const titleId = useId();
   const descriptionId = useId();
   const statusId = useId();
+  const priorityId = useId();
+  const dueAtId = useId();
+  const labelsId = useId();
+  const assigneeId = useId();
+
+  const [commentBody, setCommentBody] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const initialValues = useMemo(() => getInitialValues(task), [task]);
 
   const form = useForm<TaskFormSchema>({
     resolver: zodResolver(taskFormSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: initialValues,
   });
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+  const detailsQuery = useTaskDetailsQuery(boardId, task?.id, isOpen && !!task);
+  const createCommentMutation = useCreateTaskCommentMutation(boardId, task?.id ?? "");
+  const uploadAttachmentMutation = useUploadTaskAttachmentMutation(
+    boardId,
+    task?.id ?? "",
+  );
+  const deleteAttachmentMutation = useDeleteTaskAttachmentMutation(
+    boardId,
+    task?.id ?? "",
+  );
 
-    form.reset(
-      task
-        ? {
-            title: task.title,
-            description: task.description,
-            status: task.status,
-          }
-        : DEFAULT_VALUES,
-    );
-  }, [form, isOpen, task]);
+  const sortedMembers = useMemo(
+    () =>
+      [...members].sort((left, right) =>
+        left.displayName.localeCompare(right.displayName),
+      ),
+    [members],
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -80,6 +144,78 @@ export function TaskFormModal({
     return null;
   }
 
+  async function handleCreateComment() {
+    if (!task || commentBody.trim().length === 0) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await createCommentMutation.mutateAsync(commentBody.trim());
+      setCommentBody("");
+      setFeedback({
+        kind: "success",
+        message: "Comment added.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Unable to add the comment.",
+      });
+    }
+  }
+
+  async function handleUploadAttachment() {
+    if (!task || !selectedFile) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await uploadAttachmentMutation.mutateAsync(selectedFile);
+      setSelectedFile(null);
+      setFeedback({
+        kind: "success",
+        message: "Attachment uploaded.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to upload the attachment.",
+      });
+    }
+  }
+
+  async function handleRemoveAttachment(attachmentIdToRemove: string) {
+    if (!task) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await deleteAttachmentMutation.mutateAsync(attachmentIdToRemove);
+      setFeedback({
+        kind: "success",
+        message: "Attachment removed.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to remove the attachment.",
+      });
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6"
@@ -89,7 +225,7 @@ export function TaskFormModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -99,8 +235,8 @@ export function TaskFormModal({
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               {mode === "create"
-                ? "Add a new task and place it in the target column."
-                : "Update the selected task without changing unrelated fields."}
+                ? "Add a new task with assignee, priority, labels, and due date."
+                : "Update task details, attachments, and discussion in one place."}
             </p>
           </div>
           <button
@@ -112,10 +248,28 @@ export function TaskFormModal({
           </button>
         </div>
 
+        {feedback ? (
+          <div className="mt-5">
+            <FeedbackNotice
+              kind={feedback.kind}
+              message={feedback.message}
+              onDismiss={() => setFeedback(null)}
+            />
+          </div>
+        ) : null}
+
         <form
           className="mt-6 space-y-5"
           onSubmit={form.handleSubmit(async (values) => {
-            await onSubmit(values);
+            await onSubmit({
+              title: values.title.trim(),
+              description: values.description.trim(),
+              status: values.status,
+              priority: values.priority,
+              dueAt: normalizeTaskDueAt(values.dueAt),
+              labels: parseTaskLabels(values.labels),
+              assigneeId: values.assigneeId.trim() || null,
+            });
           })}
         >
           <div>
@@ -132,11 +286,7 @@ export function TaskFormModal({
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               {...form.register("title")}
             />
-            {form.formState.errors.title ? (
-              <p className="mt-2 text-sm text-rose-700">
-                {form.formState.errors.title.message}
-              </p>
-            ) : null}
+            <FieldError message={form.formState.errors.title?.message} />
           </div>
 
           <div>
@@ -152,31 +302,109 @@ export function TaskFormModal({
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               {...form.register("description")}
             />
-            {form.formState.errors.description ? (
-              <p className="mt-2 text-sm text-rose-700">
-                {form.formState.errors.description.message}
-              </p>
-            ) : null}
+            <FieldError message={form.formState.errors.description?.message} />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor={statusId}
+                className="block text-sm font-medium text-slate-800"
+              >
+                Column
+              </label>
+              <select
+                id={statusId}
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                {...form.register("status")}
+              >
+                {TASK_COLUMNS.map((column) => (
+                  <option key={column.status} value={column.status}>
+                    {column.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor={priorityId}
+                className="block text-sm font-medium text-slate-800"
+              >
+                Priority
+              </label>
+              <select
+                id={priorityId}
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                {...form.register("priority")}
+              >
+                {TASK_PRIORITIES.map((priority) => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor={dueAtId}
+                className="block text-sm font-medium text-slate-800"
+              >
+                Due date
+              </label>
+              <input
+                id={dueAtId}
+                type="datetime-local"
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                {...form.register("dueAt")}
+              />
+              <FieldError message={form.formState.errors.dueAt?.message} />
+            </div>
+
+            <div>
+              <label
+                htmlFor={assigneeId}
+                className="block text-sm font-medium text-slate-800"
+              >
+                Assignee
+              </label>
+              <select
+                id={assigneeId}
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                {...form.register("assigneeId")}
+              >
+                <option value="">Unassigned</option>
+                {sortedMembers.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+              <FieldError message={form.formState.errors.assigneeId?.message} />
+            </div>
           </div>
 
           <div>
             <label
-              htmlFor={statusId}
+              htmlFor={labelsId}
               className="block text-sm font-medium text-slate-800"
             >
-              Column
+              Labels
             </label>
-            <select
-              id={statusId}
+            <input
+              id={labelsId}
+              type="text"
+              placeholder="design, frontend, blocked"
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-              {...form.register("status")}
-            >
-              {TASK_COLUMNS.map((column) => (
-                <option key={column.status} value={column.status}>
-                  {column.title}
-                </option>
-              ))}
-            </select>
+              {...form.register("labels")}
+            />
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Separate labels with commas. Up to 8 labels are supported.
+            </p>
+            <FieldError message={form.formState.errors.labels?.message} />
           </div>
 
           {errorMessage ? (
@@ -208,7 +436,163 @@ export function TaskFormModal({
             </button>
           </div>
         </form>
+
+        {task ? (
+          <div className="mt-8 grid gap-6 border-t border-slate-200 pt-6 lg:grid-cols-2">
+            <section>
+              <header>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+                  Attachments
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Upload supporting files up to 10 MB.
+                </p>
+              </header>
+
+              <div className="mt-4 space-y-3">
+                <input
+                  type="file"
+                  onChange={(event) =>
+                    setSelectedFile(event.target.files?.[0] ?? null)
+                  }
+                  className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                />
+                <button
+                  type="button"
+                  disabled={!selectedFile || uploadAttachmentMutation.isPending}
+                  onClick={() => void handleUploadAttachment()}
+                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                >
+                  {uploadAttachmentMutation.isPending
+                    ? "Uploading..."
+                    : "Upload attachment"}
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {detailsQuery.isLoading ? (
+                  <BoardLoadingState />
+                ) : detailsQuery.isError ? (
+                  <BoardErrorState message={detailsQuery.error.message} />
+                ) : detailsQuery.data && detailsQuery.data.attachments.length > 0 ? (
+                  <ul className="space-y-3">
+                    {detailsQuery.data.attachments.map((attachment) => (
+                      <li
+                        key={attachment.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <a
+                              href={attachment.publicUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm font-semibold text-slate-950 underline-offset-4 hover:underline"
+                            >
+                              {attachment.fileName}
+                            </a>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              {formatTaskAttachmentSize(attachment.sizeBytes)} · Uploaded by{" "}
+                              {attachment.uploadedByName}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={
+                              deleteAttachmentMutation.isPending &&
+                              deleteAttachmentMutation.variables === attachment.id
+                            }
+                            onClick={() => void handleRemoveAttachment(attachment.id)}
+                            className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600">
+                    No attachments yet.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section>
+              <header>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+                  Comments
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Capture discussion and implementation notes.
+                </p>
+              </header>
+
+              <div className="mt-4 space-y-3">
+                <textarea
+                  rows={4}
+                  value={commentBody}
+                  onChange={(event) => setCommentBody(event.target.value)}
+                  placeholder="Add context for the next collaborator..."
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                />
+                <button
+                  type="button"
+                  disabled={
+                    commentBody.trim().length === 0 || createCommentMutation.isPending
+                  }
+                  onClick={() => void handleCreateComment()}
+                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                >
+                  {createCommentMutation.isPending ? "Posting..." : "Add comment"}
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {detailsQuery.isLoading ? (
+                  <BoardLoadingState />
+                ) : detailsQuery.isError ? (
+                  <BoardErrorState message={detailsQuery.error.message} />
+                ) : detailsQuery.data && detailsQuery.data.comments.length > 0 ? (
+                  <ul className="space-y-3">
+                    {detailsQuery.data.comments.map((comment) => (
+                      <li
+                        key={comment.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                      >
+                        <p className="text-sm leading-6 text-slate-700">{comment.body}</p>
+                        <p className="mt-3 text-xs leading-5 text-slate-500">
+                          {comment.createdByName}
+                          {formatTaskDueAt(comment.createdAt)
+                            ? ` · ${formatTaskDueAt(comment.createdAt)}`
+                            : ""}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600">
+                    No comments yet.
+                  </p>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
     </div>
   );
+}
+
+type FieldErrorProps = {
+  message?: string;
+};
+
+function FieldError({ message }: FieldErrorProps) {
+  if (!message) {
+    return null;
+  }
+
+  return <p className="mt-2 text-sm text-rose-700">{message}</p>;
 }
