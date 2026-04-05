@@ -30,6 +30,9 @@ export function useUpdateBoardMutation() {
         queryClient.invalidateQueries({
           queryKey: boardsQueryKeys.members(variables.boardId),
         }),
+        queryClient.invalidateQueries({
+          queryKey: boardsQueryKeys.invitations(variables.boardId),
+        }),
       ]);
     },
   });

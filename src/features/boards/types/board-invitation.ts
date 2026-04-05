@@ -8,6 +8,9 @@ export type BoardInvitation = {
   invitedByName: string;
   invitedByEmail: string;
   invitedUserId: string | null;
+  token: string;
+  tokenExpiresAt: string;
+  lastSentAt: string;
   createdAt: string;
   acceptedAt: string | null;
   revokedAt: string | null;

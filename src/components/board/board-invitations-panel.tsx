@@ -10,6 +10,11 @@ import { useBoardInvitationsQuery } from "@/features/boards/hooks/use-board-invi
 import { useCreateBoardInvitationMutation } from "@/features/boards/hooks/use-create-board-invitation-mutation";
 import { useRemoveBoardInvitationMutation } from "@/features/boards/hooks/use-remove-board-invitation-mutation";
 import { useUpdateBoardInvitationMutation } from "@/features/boards/hooks/use-update-board-invitation-mutation";
+import {
+  canInviteToBoard,
+  canManageInvitation,
+  canReviewAllInvitations,
+} from "@/features/boards/lib/board-permissions";
 import type { BoardSummary } from "@/features/boards/types/board";
 
 type FeedbackState = {
@@ -19,23 +24,27 @@ type FeedbackState = {
 
 type BoardInvitationsPanelProps = {
   board: BoardSummary;
+  viewerEmail: string;
 };
 
-export function BoardInvitationsPanel({ board }: BoardInvitationsPanelProps) {
+export function BoardInvitationsPanel({
+  board,
+  viewerEmail,
+}: BoardInvitationsPanelProps) {
   const invitationsQuery = useBoardInvitationsQuery(board.id);
   const createInvitationMutation = useCreateBoardInvitationMutation(board.id);
   const updateInvitationMutation = useUpdateBoardInvitationMutation(board.id);
   const removeInvitationMutation = useRemoveBoardInvitationMutation(board.id);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const canManageInvitations =
-    board.currentUserRole === "owner" || board.currentUserRole === "admin";
+  const canAccessInvitations = canInviteToBoard(board);
+  const canReviewInvitations = canReviewAllInvitations(board.currentUserRole);
 
   const invitations = useMemo(
     () => invitationsQuery.data ?? [],
     [invitationsQuery.data],
   );
 
-  if (!canManageInvitations) {
+  if (!canAccessInvitations) {
     return null;
   }
 
@@ -131,7 +140,9 @@ export function BoardInvitationsPanel({ board }: BoardInvitationsPanelProps) {
           Invitations
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Send invite emails to new collaborators and manage pending invitations.
+          {canReviewInvitations
+            ? "Send invite emails, copy invite links, and manage pending invitations."
+            : "Send invite emails and track the invitations you created."}
         </p>
       </header>
 
@@ -148,9 +159,21 @@ export function BoardInvitationsPanel({ board }: BoardInvitationsPanelProps) {
       <div className="mt-5">
         <InviteBoardMemberForm
           isPending={createInvitationMutation.isPending}
+          canChooseRole={canReviewInvitations}
+          defaultRole={board.defaultInviteRole}
           onSubmit={handleInvite}
         />
       </div>
+
+      {!canReviewInvitations ? (
+        <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs leading-5 text-slate-600">
+          Member-created invites inherit the board default role of{" "}
+          <span className="font-semibold uppercase tracking-[0.16em] text-slate-950">
+            {board.defaultInviteRole}
+          </span>
+          .
+        </p>
+      ) : null}
 
       <div className="mt-5">
         {invitationsQuery.isLoading ? (
@@ -163,7 +186,13 @@ export function BoardInvitationsPanel({ board }: BoardInvitationsPanelProps) {
               <BoardInvitationRow
                 key={invitation.id}
                 invitation={invitation}
-                canManageInvitations={canManageInvitations}
+                canChangeRole={canReviewInvitations}
+                canManageInvitation={canManageInvitation(
+                  board,
+                  invitation,
+                  viewerEmail,
+                )}
+                invitePath={`/invite/${invitation.token}`}
                 isUpdating={
                   updateInvitationMutation.isPending &&
                   updateInvitationMutation.variables?.invitationId === invitation.id

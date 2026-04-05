@@ -12,6 +12,9 @@ type BoardRow = {
   name: string;
   description: string;
   archived_at: string | null;
+  accent_color: BoardSummary["accentColor"];
+  invite_policy: BoardSummary["invitePolicy"];
+  default_invitee_role: BoardSummary["defaultInviteRole"];
   created_at: string;
 };
 
@@ -28,7 +31,9 @@ export async function getAccessibleBoards(
         .returns<MembershipRow[]>(),
       supabase
         .from("boards")
-        .select("id, name, description, archived_at, created_at")
+        .select(
+          "id, name, description, archived_at, accent_color, invite_policy, default_invitee_role, created_at",
+        )
         .order("created_at", { ascending: true })
         .returns<BoardRow[]>(),
     ]);
@@ -52,6 +57,9 @@ export async function getAccessibleBoards(
       name: board.name,
       description: board.description,
       archivedAt: board.archived_at,
+      accentColor: board.accent_color,
+      invitePolicy: board.invite_policy,
+      defaultInviteRole: board.default_invitee_role,
       currentUserRole: roleByBoardId.get(board.id) ?? "member",
     }));
 }

@@ -72,6 +72,9 @@ export async function POST(request: Request) {
     const { data: boardId, error } = await supabase.rpc("create_board_with_owner", {
       target_name: parsed.data.name,
       target_description: parsed.data.description,
+      target_accent_color: parsed.data.accentColor,
+      target_invite_policy: parsed.data.invitePolicy,
+      target_default_invitee_role: parsed.data.defaultInviteRole,
     });
 
     if (error || !boardId) {

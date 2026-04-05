@@ -6,9 +6,10 @@ with:
 - Supabase Auth with cookie-backed SSR sessions
 - protected board routes
 - multi-board creation and switching
-- email invitation flow with acceptance on auth callback
+- email invitation flow with explicit invite-token acceptance
 - owner/admin/member role management per board
 - board archive, delete, and ownership transfer controls
+- richer board settings for accent color and invite policy
 - create, edit, reorder, and cross-column task moves
 - optimistic UI for mutations
 - realtime sync across signed-in users
@@ -251,6 +252,7 @@ Helper database functions:
 - `public.ensure_current_user_profile()`
 - `public.create_board_with_owner(text)`
 - `public.accept_pending_board_invitations()`
+- `public.accept_board_invitation(text)`
 - `public.transfer_board_ownership(uuid, uuid)`
 - `public.lookup_board_member_candidate(uuid, text)`
 

@@ -13,6 +13,9 @@ const BOARD_INVITATIONS_SELECT = `
   role,
   invited_by,
   invited_user_id,
+  token,
+  token_expires_at,
+  last_sent_at,
   created_at,
   accepted_at,
   revoked_at,
@@ -22,13 +25,22 @@ const BOARD_INVITATIONS_SELECT = `
 export async function getBoardInvitations(
   supabase: SupabaseClient<Database>,
   boardId: string,
+  options?: {
+    invitedByUserId?: string;
+  },
 ): Promise<BoardInvitation[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("board_invitations")
     .select(BOARD_INVITATIONS_SELECT)
     .eq("board_id", boardId)
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
+
+  if (options?.invitedByUserId) {
+    query = query.eq("invited_by", options.invitedByUserId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);

@@ -16,6 +16,7 @@ type AuthMode = "login" | "signup";
 
 type AuthFormProps = {
   defaultMode?: AuthMode;
+  nextPath?: string;
 };
 
 type FeedbackState = {
@@ -23,7 +24,10 @@ type FeedbackState = {
   message: string;
 } | null;
 
-export function AuthForm({ defaultMode = "login" }: AuthFormProps) {
+export function AuthForm({
+  defaultMode = "login",
+  nextPath = "/board",
+}: AuthFormProps) {
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>(defaultMode);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -75,7 +79,7 @@ export function AuthForm({ defaultMode = "login" }: AuthFormProps) {
       return;
     }
 
-    router.replace("/board");
+    router.replace(nextPath);
     router.refresh();
   }
 
@@ -98,7 +102,9 @@ export function AuthForm({ defaultMode = "login" }: AuthFormProps) {
         data: {
           display_name: values.displayName,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/board`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+          nextPath,
+        )}`,
       },
     });
 
@@ -111,7 +117,7 @@ export function AuthForm({ defaultMode = "login" }: AuthFormProps) {
     }
 
     if (data.session) {
-      router.replace("/board");
+      router.replace(nextPath);
       router.refresh();
       return;
     }

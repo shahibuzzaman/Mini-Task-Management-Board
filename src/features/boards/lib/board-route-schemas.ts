@@ -1,6 +1,15 @@
 import { z } from "zod";
 
 export const boardIdSchema = z.uuid("Invalid board identifier.");
+export const boardAccentColorSchema = z.enum([
+  "sky",
+  "emerald",
+  "amber",
+  "rose",
+  "slate",
+]);
+export const boardInvitePolicySchema = z.enum(["admins_only", "members"]);
+export const boardInviteRoleSchema = z.enum(["admin", "member"]);
 
 export const createBoardSchema = z.object({
   name: z
@@ -13,6 +22,9 @@ export const createBoardSchema = z.object({
     .trim()
     .max(280, "Board description must be 280 characters or fewer.")
     .default(""),
+  accentColor: boardAccentColorSchema.default("sky"),
+  invitePolicy: boardInvitePolicySchema.default("admins_only"),
+  defaultInviteRole: boardInviteRoleSchema.default("member"),
 });
 
 export const updateBoardSchema = createBoardSchema.extend({

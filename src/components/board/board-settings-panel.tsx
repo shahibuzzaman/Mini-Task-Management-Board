@@ -6,10 +6,19 @@ import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
+import {
+  canManageBoardLifecycle,
+  canManageBoardSettings,
+} from "@/features/boards/lib/board-permissions";
 import { useDeleteBoardMutation } from "@/features/boards/hooks/use-delete-board-mutation";
 import { useTransferBoardOwnershipMutation } from "@/features/boards/hooks/use-transfer-board-ownership-mutation";
 import { useUpdateBoardMutation } from "@/features/boards/hooks/use-update-board-mutation";
 import type { BoardSummary } from "@/features/boards/types/board";
+import type {
+  BoardAccentColor,
+  BoardInvitePolicy,
+  BoardInviteRole,
+} from "@/types/database";
 
 type FeedbackState = {
   kind: "success" | "error";
@@ -28,10 +37,21 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
   const deleteBoardMutation = useDeleteBoardMutation();
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description);
+  const [accentColor, setAccentColor] = useState<BoardAccentColor>(
+    board.accentColor,
+  );
+  const [invitePolicy, setInvitePolicy] = useState<BoardInvitePolicy>(
+    board.invitePolicy,
+  );
+  const [defaultInviteRole, setDefaultInviteRole] = useState<BoardInviteRole>(
+    board.defaultInviteRole,
+  );
   const [targetOwnerId, setTargetOwnerId] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const canEditSettings = canManageBoardSettings(board.currentUserRole);
+  const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
 
-  if (board.currentUserRole !== "owner" && board.currentUserRole !== "admin") {
+  if (!canEditSettings) {
     return null;
   }
 
@@ -48,7 +68,9 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         boardId: board.id,
         name,
         description,
-        archivedAt: board.archivedAt,
+        accentColor,
+        invitePolicy,
+        defaultInviteRole,
       });
       setFeedback({
         kind: "success",
@@ -74,6 +96,9 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         boardId: board.id,
         name,
         description,
+        accentColor,
+        invitePolicy,
+        defaultInviteRole,
         archivedAt: board.archivedAt ? null : new Date().toISOString(),
       });
       setFeedback({
@@ -154,8 +179,8 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {board.currentUserRole === "owner"
-            ? "Owners can update details, transfer ownership, archive, or delete the board."
-            : "Admins can update board details while owners retain destructive controls."}
+            ? "Owners can tune collaboration policy, lifecycle controls, and ownership."
+            : "Admins can update collaboration settings while owners retain destructive controls."}
         </p>
       </header>
 
@@ -204,6 +229,80 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           />
         </div>
 
+        <div>
+          <label
+            htmlFor={`board-settings-accent-${board.id}`}
+            className="block text-sm font-medium text-slate-700"
+          >
+            Accent color
+          </label>
+          <select
+            id={`board-settings-accent-${board.id}`}
+            value={accentColor}
+            onChange={(event) =>
+              setAccentColor(event.target.value as BoardAccentColor)
+            }
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            disabled={updateBoardMutation.isPending}
+          >
+            <option value="sky">Sky</option>
+            <option value="emerald">Emerald</option>
+            <option value="amber">Amber</option>
+            <option value="rose">Rose</option>
+            <option value="slate">Slate</option>
+          </select>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor={`board-settings-invite-policy-${board.id}`}
+              className="block text-sm font-medium text-slate-700"
+            >
+              Invite policy
+            </label>
+            <select
+              id={`board-settings-invite-policy-${board.id}`}
+              value={invitePolicy}
+              onChange={(event) =>
+                setInvitePolicy(event.target.value as BoardInvitePolicy)
+              }
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              disabled={updateBoardMutation.isPending}
+            >
+              <option value="admins_only">Owners and admins only</option>
+              <option value="members">Members can invite too</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor={`board-settings-default-invite-role-${board.id}`}
+              className="block text-sm font-medium text-slate-700"
+            >
+              Default invite role
+            </label>
+            <select
+              id={`board-settings-default-invite-role-${board.id}`}
+              value={defaultInviteRole}
+              onChange={(event) =>
+                setDefaultInviteRole(event.target.value as BoardInviteRole)
+              }
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              disabled={updateBoardMutation.isPending}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">
+          Members can always collaborate on tasks. Invite policy decides whether
+          members can send new invitations, and member-created invites use the
+          default invite role.
+        </p>
+
         <button
           type="submit"
           disabled={updateBoardMutation.isPending || name.trim().length < 2}
@@ -213,7 +312,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         </button>
       </form>
 
-      {board.currentUserRole === "owner" ? (
+      {canManageLifecycle ? (
         <>
           <div className="mt-6 border-t border-slate-200 pt-6">
             <div className="flex items-center justify-between gap-4">

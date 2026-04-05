@@ -1,10 +1,17 @@
+import { getAuthRedirectPath } from "@/features/auth/lib/get-auth-redirect-path";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 
-export default async function AuthPage() {
+type AuthPageProps = {
+  searchParams: Promise<{
+    next?: string;
+  }>;
+};
+
+export default async function AuthPage({ searchParams }: AuthPageProps) {
   const config = getSupabaseBrowserConfig();
 
   if (!config.isConfigured) {
@@ -29,8 +36,12 @@ export default async function AuthPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/board");
+    const { next } = await searchParams;
+    redirect(getAuthRedirectPath(next ?? null));
   }
+
+  const { next } = await searchParams;
+  const nextPath = getAuthRedirectPath(next ?? null);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-10 sm:px-8 lg:px-10">
@@ -49,7 +60,7 @@ export default async function AuthPage() {
           </p>
         </section>
 
-        <AuthForm />
+        <AuthForm nextPath={nextPath} />
       </div>
     </main>
   );

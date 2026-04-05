@@ -48,8 +48,9 @@ Show:
 
 - account card with display name and email
 - board list with create and switch controls
-- board settings panel with description, archive state, and destructive controls
+- board settings panel with accent color, invite policy, archive state, and destructive controls
 - invitation panel with pending invites
+- invite acceptance page with explicit token acceptance
 - board members panel with visible roles
 - protected board shell
 - three columns with tasks
@@ -68,7 +69,7 @@ Show:
 3. the members panel
 4. current user role
 5. invite a not-yet-registered user by email
-6. show pending invitation state
+6. open the invite link and show the explicit acceptance page
 7. owner/admin role change controls
 8. ownership transfer and archive/delete controls
 
@@ -76,8 +77,9 @@ Say:
 
 "Each board has three roles: `owner`, `admin`, and `member`. Owners control
 board lifecycle and ownership transfer. Admins can manage invitations and
-memberships. Members collaborate on tasks only. Those rules are enforced in
-both the route handlers and the database policies."
+memberships. Members collaborate on tasks, and a board policy can optionally
+let them create invitations that inherit a default invite role. Those rules are
+enforced in both the route handlers and the database policies."
 
 ## Create And Edit
 
@@ -131,8 +133,9 @@ Say:
 
 "Authorization is RLS-first. Profiles, board membership, and tasks are all
 guarded in the database. The app route handlers use a server Supabase client
-with verified auth cookies, and invitation emails use a separate server-only
-Supabase admin client. The board route itself is protected on the server."
+with verified auth cookies, and invitation emails use server-only Supabase
+clients. The board route itself is protected on the server, while invite links
+land on a dedicated acceptance screen instead of auto-joining on callback."
 
 ## Trade-Offs
 

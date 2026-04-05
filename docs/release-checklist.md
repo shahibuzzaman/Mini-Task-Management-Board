@@ -53,9 +53,12 @@
 - board creation works
 - board switching works
 - invitation email can be sent for a new email address
+- invite link opens the dedicated acceptance page
 - accepting the invite adds the user to the intended board
+- invite copy-link fallback works
 - owner sees board settings controls
 - owner and admin see invitation management controls
+- member invite permissions match the board invite policy
 - owner can transfer ownership
 - owner can archive/unarchive and delete a board
 - member does not see invitation or destructive board controls
@@ -89,6 +92,7 @@
 - show board creation
 - show board switching
 - show invitation flow
+- show explicit invite acceptance
 - show owner/member access difference
 - show create flow
 - show edit flow

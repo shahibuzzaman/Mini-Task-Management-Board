@@ -1,12 +1,20 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   createBoardInvitationSchema,
   updateBoardInvitationSchema,
 } from "@/features/boards/lib/board-invitation-route-schemas";
+import {
+  canInviteToBoard,
+  canManageInvitation,
+  canReviewAllInvitations,
+} from "@/features/boards/lib/board-permissions";
 import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import { mapBoardInvitationRowToBoardInvitation } from "@/features/boards/lib/map-board-invitation-row";
+import { sendBoardInvitationEmail } from "@/features/boards/lib/send-board-invitation-email";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseEmailClient } from "@/lib/supabase/email";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const invitationIdSchema = z.uuid("Invalid invitation identifier.");
@@ -18,6 +26,9 @@ const BOARD_INVITATION_SELECT = `
   role,
   invited_by,
   invited_user_id,
+  token,
+  token_expires_at,
+  last_sent_at,
   created_at,
   accepted_at,
   revoked_at,
@@ -33,8 +44,21 @@ type RouteContext = {
 type InvitationRow = {
   board_id: string;
   email: string;
+  role: "admin" | "member" | "owner";
+  invited_by: string;
   accepted_at: string | null;
   revoked_at: string | null;
+};
+
+type DeletableInvitationRow = {
+  id: string;
+  board_id: string;
+  invited_by: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  inviter: {
+    email: string;
+  } | null;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -49,6 +73,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const adminClient = createSupabaseAdminClient();
+    const emailClient = createSupabaseEmailClient();
 
     if (!adminClient) {
       return NextResponse.json(
@@ -94,19 +119,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBody.data.boardId);
 
-    if (
-      board.currentUserRole !== "owner" &&
-      board.currentUserRole !== "admin"
-    ) {
+    if (!canInviteToBoard(board)) {
       return NextResponse.json(
-        { error: "Only board owners and admins can update invitations." },
+        { error: "You do not have permission to manage invitations." },
         { status: 403 },
       );
     }
 
     const { data: invitation, error: invitationError } = await supabase
       .from("board_invitations")
-      .select("board_id, email, accepted_at, revoked_at")
+      .select("board_id, email, role, invited_by, accepted_at, revoked_at")
       .eq("id", parsedInvitationId.data)
       .single<InvitationRow>();
 
@@ -118,6 +140,23 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Invitation not found." }, { status: 404 });
     }
 
+    if (
+      !canReviewAllInvitations(board.currentUserRole) &&
+      invitation.invited_by !== user.id
+    ) {
+      return NextResponse.json(
+        { error: "You can only manage invitations you created." },
+        { status: 403 },
+      );
+    }
+
+    const updatePayload: {
+      role?: "admin" | "member";
+      token?: string;
+      token_expires_at?: string;
+      last_sent_at?: string;
+    } = {};
+
     if (parsedBody.data.action === "resend") {
       if (invitation.accepted_at || invitation.revoked_at) {
         return NextResponse.json(
@@ -126,28 +165,38 @@ export async function PATCH(request: Request, context: RouteContext) {
         );
       }
 
-      const origin = new URL(request.url).origin;
-      const { error: resendError } = await adminClient.auth.admin.inviteUserByEmail(
-        invitation.email,
-        {
-          redirectTo: `${origin}/auth/callback?next=/board?boardId=${board.id}`,
-          data: {
-            invited_board_id: board.id,
-          },
-        },
-      );
+      const nextToken = randomBytes(24).toString("hex");
+      const nextExpiry = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
+      const nextSentAt = new Date().toISOString();
 
-      if (resendError) {
-        return NextResponse.json({ error: resendError.message }, { status: 400 });
-      }
+      updatePayload.token = nextToken;
+      updatePayload.token_expires_at = nextExpiry;
+      updatePayload.last_sent_at = nextSentAt;
     }
 
-    const updatePayload: {
-      role?: "admin" | "member";
-    } = {};
-
     if (parsedBody.data.role) {
+      if (!canReviewAllInvitations(board.currentUserRole)) {
+        return NextResponse.json(
+          { error: "Only board owners and admins can change invitation roles." },
+          { status: 403 },
+        );
+      }
+
       updatePayload.role = parsedBody.data.role;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      const { data, error } = await supabase
+        .from("board_invitations")
+        .select(BOARD_INVITATION_SELECT)
+        .eq("id", parsedInvitationId.data)
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json(mapBoardInvitationRowToBoardInvitation(data as never));
     }
 
     const { data, error } = await supabase
@@ -161,7 +210,30 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(mapBoardInvitationRowToBoardInvitation(data as never));
+    const mappedInvitation = mapBoardInvitationRowToBoardInvitation(data as never);
+
+    if (parsedBody.data.action === "resend") {
+      try {
+        await sendBoardInvitationEmail({
+          adminClient,
+          emailClient,
+          email: invitation.email,
+          redirectTo: `${new URL(request.url).origin}/auth/callback?next=/invite/${mappedInvitation.token}`,
+        });
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to resend the invitation email.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    return NextResponse.json(mappedInvitation);
   } catch (error) {
     return NextResponse.json(
       {
@@ -221,12 +293,43 @@ export async function DELETE(request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBody.data.boardId);
 
+    if (!canInviteToBoard(board)) {
+      return NextResponse.json(
+        { error: "You do not have permission to revoke invitations." },
+        { status: 403 },
+      );
+    }
+
+    const { data: invitation, error: invitationError } = await supabase
+      .from("board_invitations")
+      .select(
+        "id, board_id, invited_by, email, accepted_at, revoked_at, inviter:profiles!board_invitations_invited_by_fkey(email)",
+      )
+      .eq("id", parsedInvitationId.data)
+      .single<DeletableInvitationRow>();
+
+    if (invitationError) {
+      return NextResponse.json({ error: invitationError.message }, { status: 404 });
+    }
+
+    if (invitation.board_id !== board.id) {
+      return NextResponse.json({ error: "Invitation not found." }, { status: 404 });
+    }
+
     if (
-      board.currentUserRole !== "owner" &&
-      board.currentUserRole !== "admin"
+      !canManageInvitation(
+        board,
+        {
+          invitedByEmail: invitation.inviter?.email ?? "",
+          acceptedAt: invitation.accepted_at,
+          revokedAt: invitation.revoked_at,
+        },
+        user.email ?? "",
+      ) &&
+      invitation.invited_by !== user.id
     ) {
       return NextResponse.json(
-        { error: "Only board owners and admins can revoke invitations." },
+        { error: "You can only revoke invitations you created." },
         { status: 403 },
       );
     }

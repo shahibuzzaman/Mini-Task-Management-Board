@@ -8,6 +8,14 @@ export type Json =
 
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type BoardRole = "owner" | "admin" | "member";
+export type BoardAccentColor =
+  | "sky"
+  | "emerald"
+  | "amber"
+  | "rose"
+  | "slate";
+export type BoardInvitePolicy = "admins_only" | "members";
+export type BoardInviteRole = Extract<BoardRole, "admin" | "member">;
 
 export type Database = {
   public: {
@@ -43,6 +51,9 @@ export type Database = {
           description: string;
           owner_id: string;
           archived_at: string | null;
+          accent_color: BoardAccentColor;
+          invite_policy: BoardInvitePolicy;
+          default_invitee_role: BoardInviteRole;
           created_at: string;
           updated_at: string;
         };
@@ -52,6 +63,9 @@ export type Database = {
           description?: string;
           owner_id: string;
           archived_at?: string | null;
+          accent_color?: BoardAccentColor;
+          invite_policy?: BoardInvitePolicy;
+          default_invitee_role?: BoardInviteRole;
           created_at?: string;
           updated_at?: string;
         };
@@ -61,6 +75,9 @@ export type Database = {
           description?: string;
           owner_id?: string;
           archived_at?: string | null;
+          accent_color?: BoardAccentColor;
+          invite_policy?: BoardInvitePolicy;
+          default_invitee_role?: BoardInviteRole;
           created_at?: string;
           updated_at?: string;
         };
@@ -134,6 +151,9 @@ export type Database = {
           role: BoardRole;
           invited_by: string;
           invited_user_id: string | null;
+          token: string;
+          token_expires_at: string;
+          last_sent_at: string;
           created_at: string;
           accepted_at: string | null;
           revoked_at: string | null;
@@ -145,6 +165,9 @@ export type Database = {
           role?: BoardRole;
           invited_by: string;
           invited_user_id?: string | null;
+          token?: string;
+          token_expires_at?: string;
+          last_sent_at?: string;
           created_at?: string;
           accepted_at?: string | null;
           revoked_at?: string | null;
@@ -156,6 +179,9 @@ export type Database = {
           role?: BoardRole;
           invited_by?: string;
           invited_user_id?: string | null;
+          token?: string;
+          token_expires_at?: string;
+          last_sent_at?: string;
           created_at?: string;
           accepted_at?: string | null;
           revoked_at?: string | null;
@@ -173,6 +199,9 @@ export type Database = {
         Args: {
           target_name: string;
           target_description?: string;
+          target_accent_color?: BoardAccentColor;
+          target_invite_policy?: BoardInvitePolicy;
+          target_default_invitee_role?: BoardInviteRole;
         };
         Returns: string;
       };
@@ -186,6 +215,18 @@ export type Database = {
           target_user_id: string;
         };
         Returns: string;
+      };
+      accept_board_invitation: {
+        Args: {
+          target_token: string;
+        };
+        Returns: string;
+      };
+      is_board_invitation_expired: {
+        Args: {
+          target_token: string;
+        };
+        Returns: boolean;
       };
       lookup_board_member_candidate: {
         Args: {

@@ -1,10 +1,17 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createBoardInvitationSchema } from "@/features/boards/lib/board-invitation-route-schemas";
 import { boardIdSchema } from "@/features/boards/lib/board-route-schemas";
+import {
+  canInviteToBoard,
+  canReviewAllInvitations,
+} from "@/features/boards/lib/board-permissions";
 import { getBoardInvitations } from "@/features/boards/lib/get-board-invitations";
 import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
 import { mapBoardInvitationRowToBoardInvitation } from "@/features/boards/lib/map-board-invitation-row";
+import { sendBoardInvitationEmail } from "@/features/boards/lib/send-board-invitation-email";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseEmailClient } from "@/lib/supabase/email";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const BOARD_INVITATION_SELECT = `
@@ -14,6 +21,9 @@ const BOARD_INVITATION_SELECT = `
   role,
   invited_by,
   invited_user_id,
+  token,
+  token_expires_at,
+  last_sent_at,
   created_at,
   accepted_at,
   revoked_at,
@@ -55,17 +65,20 @@ export async function GET(request: Request) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
 
-    if (
-      board.currentUserRole !== "owner" &&
-      board.currentUserRole !== "admin"
-    ) {
+    if (!canInviteToBoard(board)) {
       return NextResponse.json(
-        { error: "Only board owners and admins can view invitations." },
+        { error: "You do not have access to this board's invitations." },
         { status: 403 },
       );
     }
 
-    const invitations = await getBoardInvitations(supabase, board.id);
+    const invitations = await getBoardInvitations(
+      supabase,
+      board.id,
+      canReviewAllInvitations(board.currentUserRole)
+        ? undefined
+        : { invitedByUserId: user.id },
+    );
 
     return NextResponse.json(invitations);
   } catch (error) {
@@ -93,6 +106,7 @@ export async function POST(request: Request) {
     }
 
     const adminClient = createSupabaseAdminClient();
+    const emailClient = createSupabaseEmailClient();
 
     if (!adminClient) {
       return NextResponse.json(
@@ -123,12 +137,9 @@ export async function POST(request: Request) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsed.data.boardId);
 
-    if (
-      board.currentUserRole !== "owner" &&
-      board.currentUserRole !== "admin"
-    ) {
+    if (!canInviteToBoard(board)) {
       return NextResponse.json(
-        { error: "Only board owners and admins can send invitations." },
+        { error: "You do not have permission to invite collaborators." },
         { status: 403 },
       );
     }
@@ -171,27 +182,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const origin = new URL(request.url).origin;
-    const { data: invitedUserData, error: inviteError } =
-      await adminClient.auth.admin.inviteUserByEmail(parsed.data.email, {
-        redirectTo: `${origin}/auth/callback?next=/board?boardId=${board.id}`,
-        data: {
-          invited_board_id: board.id,
-        },
-      });
-
-    if (inviteError) {
-      return NextResponse.json({ error: inviteError.message }, { status: 400 });
-    }
-
     const { data: insertedInvitation, error: insertError } = await supabase
       .from("board_invitations")
       .insert({
         board_id: board.id,
         email: parsed.data.email.toLowerCase(),
-        role: parsed.data.role,
+        role:
+          board.currentUserRole === "member"
+            ? board.defaultInviteRole
+            : parsed.data.role,
         invited_by: user.id,
-        invited_user_id: invitedUserData.user?.id ?? null,
+        invited_user_id: existingMembership?.id ?? null,
+        token: randomBytes(24).toString("hex"),
+        token_expires_at: new Date(
+          Date.now() + 1000 * 60 * 60 * 24 * 7,
+        ).toISOString(),
+        last_sent_at: new Date().toISOString(),
       })
       .select(BOARD_INVITATION_SELECT)
       .single();
@@ -200,10 +206,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: insertError.message }, { status: 400 });
     }
 
-    return NextResponse.json(
-      mapBoardInvitationRowToBoardInvitation(insertedInvitation as never),
-      { status: 201 },
+    const invitation = mapBoardInvitationRowToBoardInvitation(
+      insertedInvitation as never,
     );
+
+    const origin = new URL(request.url).origin;
+
+    try {
+      await sendBoardInvitationEmail({
+        adminClient,
+        emailClient,
+        email: invitation.email,
+        redirectTo: `${origin}/auth/callback?next=/invite/${invitation.token}`,
+      });
+    } catch (error) {
+      await adminClient.from("board_invitations").delete().eq("id", invitation.id);
+
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to send the invitation email.",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(invitation, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       {

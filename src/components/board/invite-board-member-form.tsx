@@ -5,6 +5,8 @@ import type { BoardRole } from "@/types/database";
 
 type InviteBoardMemberFormProps = {
   isPending: boolean;
+  canChooseRole?: boolean;
+  defaultRole?: Extract<BoardRole, "admin" | "member">;
   onSubmit: (input: {
     email: string;
     role: Extract<BoardRole, "admin" | "member">;
@@ -13,11 +15,13 @@ type InviteBoardMemberFormProps = {
 
 export function InviteBoardMemberForm({
   isPending,
+  canChooseRole = true,
+  defaultRole = "member",
   onSubmit,
 }: InviteBoardMemberFormProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Extract<BoardRole, "admin" | "member">>(
-    "member",
+    defaultRole,
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -29,7 +33,7 @@ export function InviteBoardMemberForm({
         role,
       });
       setEmail("");
-      setRole("member");
+      setRole(defaultRole);
     } catch {
       // Parent renders feedback.
     }
@@ -49,19 +53,29 @@ export function InviteBoardMemberForm({
         />
       </label>
 
-      <label className="block text-sm font-medium text-slate-800">
-        Invite as
-        <select
-          value={role}
-          onChange={(event) =>
-            setRole(event.target.value as Extract<BoardRole, "admin" | "member">)
-          }
-          className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-        >
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-        </select>
-      </label>
+      {canChooseRole ? (
+        <label className="block text-sm font-medium text-slate-800">
+          Invite as
+          <select
+            value={role}
+            onChange={(event) =>
+              setRole(event.target.value as Extract<BoardRole, "admin" | "member">)
+            }
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+          >
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+      ) : (
+        <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs leading-5 text-slate-600">
+          New collaborators will be invited as{" "}
+          <span className="font-semibold uppercase tracking-[0.16em] text-slate-950">
+            {defaultRole}
+          </span>
+          .
+        </p>
+      )}
 
       <button
         type="submit"

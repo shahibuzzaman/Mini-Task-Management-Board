@@ -1,5 +1,7 @@
+import { BoardAdminToolsPanel } from "@/components/board/board-admin-tools-panel";
 import { AccountSummary } from "@/features/auth/components/account-summary";
 import type { AuthViewer } from "@/features/auth/types/viewer";
+import { getBoardTheme } from "@/features/boards/lib/board-theme";
 import type { BoardSummary } from "@/features/boards/types/board";
 import { BoardSettingsPanel } from "@/components/board/board-settings-panel";
 import { BoardInvitationsPanel } from "@/components/board/board-invitations-panel";
@@ -14,11 +16,17 @@ type BoardPageShellProps = {
 };
 
 export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
+  const boardTheme = board ? getBoardTheme(board.accentColor) : null;
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 sm:px-8 lg:px-10">
       <div className="flex flex-col gap-8">
         <header className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
+          <p
+            className={`text-sm font-semibold uppercase tracking-[0.24em] ${
+              boardTheme?.accentTextClassName ?? "text-sky-700"
+            }`}
+          >
             Authenticated Workspace
           </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
@@ -27,6 +35,12 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
           {board?.archivedAt ? (
             <p className="mt-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">
               Archived board
+            </p>
+          ) : boardTheme ? (
+            <p
+              className={`mt-3 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${boardTheme.badgeClassName}`}
+            >
+              {board?.accentColor} workspace
             </p>
           ) : null}
           <p className="mt-4 text-base leading-7 text-slate-600">
@@ -56,7 +70,10 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
             <AccountSummary viewer={viewer} />
             <BoardsPanel boards={boards} activeBoardId={board?.id ?? null} />
             {board ? <BoardSettingsPanel key={board.id} board={board} /> : null}
-            {board ? <BoardInvitationsPanel board={board} /> : null}
+            {board ? <BoardAdminToolsPanel board={board} /> : null}
+            {board ? (
+              <BoardInvitationsPanel board={board} viewerEmail={viewer.email} />
+            ) : null}
             {board ? <BoardMembersPanel board={board} viewer={viewer} /> : null}
           </aside>
         </div>

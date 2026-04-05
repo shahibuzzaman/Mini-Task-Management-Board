@@ -18,6 +18,9 @@ type BoardRow = {
   name: string;
   description: string;
   archived_at: string | null;
+  accent_color: "sky" | "emerald" | "amber" | "rose" | "slate";
+  invite_policy: "admins_only" | "members";
+  default_invitee_role: "admin" | "member";
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -86,9 +89,14 @@ export async function PATCH(request: Request, context: RouteContext) {
         name: parsedBody.data.name,
         description: parsedBody.data.description,
         archived_at: parsedBody.data.archivedAt,
+        accent_color: parsedBody.data.accentColor,
+        invite_policy: parsedBody.data.invitePolicy,
+        default_invitee_role: parsedBody.data.defaultInviteRole,
       })
       .eq("id", parsedBoardId.data)
-      .select("id, name, description, archived_at")
+      .select(
+        "id, name, description, archived_at, accent_color, invite_policy, default_invitee_role",
+      )
       .single<BoardRow>();
 
     if (error) {
@@ -100,6 +108,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       name: data.name,
       description: data.description,
       archivedAt: data.archived_at,
+      accentColor: data.accent_color,
+      invitePolicy: data.invite_policy,
+      defaultInviteRole: data.default_invitee_role,
       currentUserRole: board.currentUserRole,
     });
   } catch (error) {

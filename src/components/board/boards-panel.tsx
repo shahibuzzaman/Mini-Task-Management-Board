@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CreateBoardForm } from "@/components/board/create-board-form";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
+import { getBoardTheme } from "@/features/boards/lib/board-theme";
 import { useCreateBoardMutation } from "@/features/boards/hooks/use-create-board-mutation";
 import type { BoardSummary } from "@/features/boards/types/board";
 
@@ -71,6 +72,7 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
         {boardList.length > 0 ? (
           boardList.map((board) => {
             const isActive = board.id === activeBoardId;
+            const theme = getBoardTheme(board.accentColor);
 
             return (
               <Link
@@ -79,7 +81,7 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
                 className={[
                   "block rounded-2xl border px-4 py-3 transition",
                   isActive
-                    ? "border-sky-300 bg-sky-50"
+                    ? theme.badgeClassName
                     : "border-slate-200 bg-slate-50 hover:bg-white",
                 ].join(" ")}
               >
@@ -94,7 +96,9 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
                     </p>
                   </div>
                   {isActive ? (
-                    <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-700">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${theme.badgeClassName}`}
+                    >
                       Active
                     </span>
                   ) : null}
