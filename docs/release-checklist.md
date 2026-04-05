@@ -8,7 +8,8 @@
 
 ## Database Setup
 
-- [supabase/schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run
+- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql) has been applied
+- or [supabase/schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run manually
 - `public.tasks` exists
 - RLS is enabled
 - Demo anon `select`, `insert`, and `update` policies exist
@@ -41,6 +42,7 @@
 
 - Repository is connected to Vercel
 - Production env vars are configured in Vercel
+- Remote Supabase project has received the migration or manual schema SQL
 - Latest commit is deployed
 - Build logs show a clean production build
 - Production URL loads successfully

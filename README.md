@@ -107,12 +107,40 @@ updated_at timestamptz not null
 
 Supporting files:
 
+- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql)
 - [supabase/schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql)
 - [supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql)
 
 The schema includes demo-only anon policies for `select`, `insert`, and
 `update`. That is acceptable for this take-home but should not be treated as a
 production auth model.
+
+## Supabase CLI Migration Setup
+
+The repo is now set up for Supabase CLI migrations.
+
+Files:
+
+- [supabase/config.toml](/Users/mac/Desktop/mini-task-management-board/supabase/config.toml)
+- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql)
+- [supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql)
+
+Useful scripts:
+
+```bash
+npm run db:start
+npm run db:stop
+npm run db:status
+npm run db:reset
+npm run db:push
+```
+
+Notes:
+
+- `db:reset` applies migrations and then runs `supabase/seed.sql`
+- `db:push` pushes local migrations to a linked remote Supabase project
+- `db:start` requires Docker because the Supabase CLI runs the local stack in
+  containers
 
 ## Realtime Implementation Approach
 
@@ -171,13 +199,53 @@ This gives fast feedback without moving server state into Zustand.
 
 ## Setup Steps
 
+### Option A: Supabase Dashboard Only
+
 1. Install dependencies.
 2. Create a Supabase project.
 3. Copy `.env.example` to `.env.local`.
 4. Add the public Supabase URL and anon key.
-5. Run the SQL schema.
-6. Run the seed SQL.
+5. Run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql).
+6. Run [seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql).
 7. Start the app locally.
+
+### Option B: Supabase CLI Migration Workflow
+
+1. Install dependencies.
+2. Install Docker if you want the full local Supabase stack.
+3. Copy `.env.example` to `.env.local`.
+4. Add the public Supabase URL and anon key.
+5. Start the local Supabase stack:
+
+```bash
+npm run db:start
+```
+
+6. Apply migrations and seed local data:
+
+```bash
+npm run db:reset
+```
+
+7. Start the app:
+
+```bash
+npm run dev
+```
+
+### Push Migrations To A Remote Supabase Project
+
+Link the repo to your remote project:
+
+```bash
+npx supabase link --project-ref <your-project-ref>
+```
+
+Then push the migrations:
+
+```bash
+npm run db:push
+```
 
 ## Environment Variables
 
@@ -209,6 +277,14 @@ npm install
 npm run dev
 ```
 
+If you want local Supabase services instead of a hosted project:
+
+```bash
+npm run db:start
+npm run db:reset
+npm run dev
+```
+
 Validation:
 
 ```bash
@@ -231,10 +307,12 @@ Typical Vercel deployment flow:
 3. Add:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. Ensure the Supabase schema and seed have already been run in the target
-   project.
-5. Trigger a production deployment.
-6. Verify:
+4. Ensure the target Supabase project has the schema applied:
+   - run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) manually, or
+   - link the project and run `npm run db:push`
+5. Seed the target project if you want demo content.
+6. Trigger a production deployment.
+7. Verify:
    - board loads
    - create works
    - edit works

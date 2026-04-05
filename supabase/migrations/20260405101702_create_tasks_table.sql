@@ -1,6 +1,4 @@
--- Supabase foundation for the take-home task board.
--- Canonical schema source:
--- supabase/migrations/20260405101702_create_tasks_table.sql
+-- Initial schema for the mini task management board.
 -- Demo-only note:
 -- The anonymous policies below are intentionally permissive so the board can be
 -- exercised without full auth. Do not ship this policy model to production.
