@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TaskFormModal } from "@/components/board/task-form-modal";
 import { TaskBoard } from "@/components/board/task-board";
 import { useCreateTaskMutation } from "@/features/tasks/hooks/use-create-task-mutation";
@@ -11,6 +12,11 @@ import { getNextTaskPosition } from "@/features/tasks/lib/get-next-task-position
 import type { TaskFormValues } from "@/features/tasks/types/task-form";
 import { useUIStore } from "@/store/ui-store-provider";
 
+type FeedbackState = {
+  kind: "success" | "error";
+  message: string;
+} | null;
+
 export function TaskBoardShell() {
   const activeUser = useUIStore((state) => state.activeUser);
   const isTaskFormOpen = useUIStore((state) => state.isTaskFormOpen);
@@ -19,6 +25,7 @@ export function TaskBoardShell() {
   const tasksQuery = useTasksQuery();
   const createTaskMutation = useCreateTaskMutation();
   const updateTaskMutation = useUpdateTaskMutation();
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
 
   useTasksRealtimeSync();
 
@@ -34,32 +41,68 @@ export function TaskBoardShell() {
     createTaskMutation.error?.message ?? updateTaskMutation.error?.message;
 
   async function handleSubmit(values: TaskFormValues) {
-    if (editingTask) {
-      await updateTaskMutation.mutateAsync({
-        id: editingTask.id,
+    setFeedback(null);
+    createTaskMutation.reset();
+    updateTaskMutation.reset();
+
+    try {
+      if (editingTask) {
+        const position =
+          values.status === editingTask.status
+            ? editingTask.position
+            : getNextTaskPosition(
+                (tasksQuery.data ?? []).filter((task) => task.id !== editingTask.id),
+                values.status,
+              );
+
+        await updateTaskMutation.mutateAsync({
+          id: editingTask.id,
+          title: values.title,
+          description: values.description,
+          status: values.status,
+          position,
+          updatedBy: activeUser,
+        });
+        closeTaskForm();
+        setFeedback({
+          kind: "success",
+          message: "Task changes saved.",
+        });
+        return;
+      }
+
+      const position = getNextTaskPosition(tasksQuery.data ?? [], values.status);
+
+      await createTaskMutation.mutateAsync({
         title: values.title,
         description: values.description,
         status: values.status,
+        position,
         updatedBy: activeUser,
       });
       closeTaskForm();
-      return;
+      setFeedback({
+        kind: "success",
+        message: "Task created successfully.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Unable to save the task.",
+      });
     }
-
-    const position = getNextTaskPosition(tasksQuery.data ?? [], values.status);
-
-    await createTaskMutation.mutateAsync({
-      title: values.title,
-      description: values.description,
-      status: values.status,
-      position,
-      updatedBy: activeUser,
-    });
-    closeTaskForm();
   }
 
   return (
     <>
+      {feedback ? (
+        <FeedbackNotice
+          kind={feedback.kind}
+          message={feedback.message}
+          onDismiss={() => setFeedback(null)}
+        />
+      ) : null}
       <TaskBoard />
       <TaskFormModal
         mode={editingTask ? "edit" : "create"}

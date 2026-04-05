@@ -1,4 +1,5 @@
 import { createStore } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export const SIMULATED_USERS = ["alice", "bob", "charlie"] as const;
 
@@ -19,25 +20,36 @@ export type UIState = {
 export type UIStore = ReturnType<typeof createUIStore>;
 
 export function createUIStore() {
-  return createStore<UIState>()((set) => ({
-    activeTaskId: null,
-    activeUser: "alice",
-    isTaskFormOpen: false,
-    editingTaskId: null,
-    setActiveTaskId: (taskId) => {
-      set({ activeTaskId: taskId });
-    },
-    setActiveUser: (user) => {
-      set({ activeUser: user });
-    },
-    openCreateTaskForm: () => {
-      set({ isTaskFormOpen: true, editingTaskId: null });
-    },
-    openEditTaskForm: (taskId) => {
-      set({ isTaskFormOpen: true, editingTaskId: taskId });
-    },
-    closeTaskForm: () => {
-      set({ isTaskFormOpen: false, editingTaskId: null });
-    },
-  }));
+  return createStore<UIState>()(
+    persist(
+      (set) => ({
+        activeTaskId: null,
+        activeUser: "alice",
+        isTaskFormOpen: false,
+        editingTaskId: null,
+        setActiveTaskId: (taskId) => {
+          set({ activeTaskId: taskId });
+        },
+        setActiveUser: (user) => {
+          set({ activeUser: user });
+        },
+        openCreateTaskForm: () => {
+          set({ isTaskFormOpen: true, editingTaskId: null });
+        },
+        openEditTaskForm: (taskId) => {
+          set({ isTaskFormOpen: true, editingTaskId: taskId });
+        },
+        closeTaskForm: () => {
+          set({ isTaskFormOpen: false, editingTaskId: null });
+        },
+      }),
+      {
+        name: "mini-task-board-ui",
+        storage: createJSONStorage(() => localStorage),
+        partialize: (state) => ({
+          activeUser: state.activeUser,
+        }),
+      },
+    ),
+  );
 }

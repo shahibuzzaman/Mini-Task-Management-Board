@@ -13,5 +13,6 @@ export type CreateTaskInput = TaskFormValues & {
 
 export type UpdateTaskInput = TaskFormValues & {
   id: string;
+  position: number;
   updatedBy: string;
 };

@@ -16,29 +16,38 @@ export function useMoveTaskMutation() {
       await queryClient.cancelQueries({ queryKey: tasksQueryKeys.list() });
 
       const previousTasks =
-        queryClient.getQueryData<Task[]>(tasksQueryKeys.list()) ?? [];
+        queryClient.getQueryData<Task[]>(tasksQueryKeys.list()) ?? null;
 
-      queryClient.setQueryData<Task[]>(tasksQueryKeys.list(), (currentTasks = []) =>
-        orderTasksForBoard(
-          currentTasks.map((task) =>
-            task.id === input.id
-              ? {
-                  ...task,
-                  status: input.status,
-                  position: input.position,
-                  updatedBy: input.updatedBy,
-                }
-              : task,
+      if (previousTasks) {
+        const now = new Date().toISOString();
+
+        queryClient.setQueryData<Task[]>(
+          tasksQueryKeys.list(),
+          orderTasksForBoard(
+            previousTasks.map((task) =>
+              task.id === input.id
+                ? {
+                    ...task,
+                    status: input.status,
+                    position: input.position,
+                    updatedBy: input.updatedBy,
+                    updatedAt: now,
+                  }
+                : task,
+            ),
           ),
-        ),
-      );
+        );
+      }
 
       return { previousTasks };
     },
-    onError: (_error, _input, context) => {
+    onError: async (_error, _input, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(tasksQueryKeys.list(), context.previousTasks);
+        return;
       }
+
+      await queryClient.invalidateQueries({ queryKey: tasksQueryKeys.list() });
     },
     onSuccess: async (movedTask) => {
       const didPatchCache = upsertTaskInTasksCache(queryClient, movedTask);
@@ -46,6 +55,9 @@ export function useMoveTaskMutation() {
       if (!didPatchCache) {
         await queryClient.invalidateQueries({ queryKey: tasksQueryKeys.list() });
       }
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: tasksQueryKeys.list() });
     },
   });
 }

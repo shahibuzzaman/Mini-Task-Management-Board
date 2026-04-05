@@ -15,7 +15,8 @@ export function SimulatedUserSwitcher() {
             Simulated User
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            UI state only. This does not persist and does not affect auth.
+            Stored in local storage for this browser only. This does not affect
+            auth.
           </p>
         </div>
 

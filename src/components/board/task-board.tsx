@@ -16,6 +16,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
 import { BoardColumn } from "@/components/board/board-column";
 import { BoardErrorState } from "@/components/board/board-error-state";
+import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { TaskCard } from "@/components/board/task-card";
@@ -30,6 +31,11 @@ import type { Task } from "@/features/tasks/types/task";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 import { useUIStore } from "@/store/ui-store-provider";
 
+type FeedbackState = {
+  kind: "success" | "error";
+  message: string;
+} | null;
+
 export function TaskBoard() {
   const supabaseConfig = getSupabaseBrowserConfig();
   const activeUser = useUIStore((state) => state.activeUser);
@@ -37,6 +43,7 @@ export function TaskBoard() {
   const moveTaskMutation = useMoveTaskMutation();
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -144,7 +151,22 @@ export function TaskBoard() {
       return;
     }
 
-    await moveTaskMutation.mutateAsync(movePayload);
+    moveTaskMutation.reset();
+    setFeedback(null);
+
+    try {
+      await moveTaskMutation.mutateAsync(movePayload);
+      setFeedback({
+        kind: "success",
+        message: "Task position updated.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Unable to move the task.",
+      });
+    }
   }
 
   function handleDragCancel() {
@@ -179,10 +201,12 @@ export function TaskBoard() {
           </div>
         </div>
 
-        {moveTaskMutation.isError ? (
-          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            {moveTaskMutation.error.message}
-          </div>
+        {feedback ? (
+          <FeedbackNotice
+            kind={feedback.kind}
+            message={feedback.message}
+            onDismiss={() => setFeedback(null)}
+          />
         ) : null}
 
         <div className="grid gap-4 lg:grid-cols-3">

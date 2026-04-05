@@ -18,6 +18,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<Task> {
       title: input.title,
       description: input.description,
       status: input.status,
+      position: input.position,
       updated_by: input.updatedBy,
     })
     .eq("id", input.id)
