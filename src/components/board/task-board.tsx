@@ -3,6 +3,7 @@
 import { BoardColumn } from "@/components/board/board-column";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
 import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
@@ -17,11 +18,16 @@ export function TaskBoard() {
   if (!supabaseConfig.isConfigured) {
     return (
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-950">Board</h2>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          Configure Supabase to load the read-only board. The active simulated
-          user is <span className="font-semibold text-slate-900">{activeUser}</span>.
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Board</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Configure Supabase to load tasks. The active simulated user is{" "}
+              <span className="font-semibold text-slate-900">{activeUser}</span>.
+            </p>
+          </div>
+          <TaskBoardActions />
+        </div>
       </section>
     );
   }
@@ -42,12 +48,16 @@ export function TaskBoard() {
         <div>
           <h2 className="text-xl font-semibold text-slate-950">Board</h2>
           <p className="text-sm leading-6 text-slate-600">
-            Read-only tasks loaded from Supabase and grouped by status.
+            Tasks loaded from Supabase and grouped by status.
           </p>
         </div>
-        <p className="text-sm text-slate-500">
-          Viewing as <span className="font-semibold text-slate-900">{activeUser}</span>
-        </p>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <p className="text-sm text-slate-500">
+            Viewing as{" "}
+            <span className="font-semibold text-slate-900">{activeUser}</span>
+          </p>
+          <TaskBoardActions />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

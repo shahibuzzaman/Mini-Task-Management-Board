@@ -1,6 +1,6 @@
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
 import { SimulatedUserSwitcher } from "@/components/board/simulated-user-switcher";
-import { TaskBoard } from "@/components/board/task-board";
+import { TaskBoardShell } from "@/components/board/task-board-shell";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 
 export function BoardPageShell() {
@@ -17,9 +17,8 @@ export function BoardPageShell() {
             Mini Task Management Board
           </h1>
           <p className="mt-4 text-base leading-7 text-slate-600">
-            The board now reads tasks from Supabase through a dedicated tasks
-            feature module. TanStack Query owns server state and Zustand owns
-            UI-only state.
+            TanStack Query owns task reads and writes. Zustand owns only UI
+            concerns such as the simulated user and task form modal state.
           </p>
         </header>
 
@@ -29,7 +28,7 @@ export function BoardPageShell() {
         />
 
         <SimulatedUserSwitcher />
-        <TaskBoard />
+        <TaskBoardShell />
       </div>
     </main>
   );
