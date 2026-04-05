@@ -108,13 +108,22 @@ export function TaskBoard() {
       return;
     }
 
-    setProjectedTasks(
-      projectDraggedTasks({
-        tasks: baseTasks,
-        taskId: String(event.active.id),
-        destination,
-      }),
-    );
+    const nextProjectedTasks = projectDraggedTasks({
+      tasks: baseTasks,
+      taskId: String(event.active.id),
+      destination,
+    });
+
+    setProjectedTasks((currentProjectedTasks) => {
+      if (
+        currentProjectedTasks &&
+        haveTasksChangedOrder(currentProjectedTasks, nextProjectedTasks)
+      ) {
+        return nextProjectedTasks;
+      }
+
+      return currentProjectedTasks ?? nextProjectedTasks;
+    });
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -226,4 +235,19 @@ export function TaskBoard() {
       </DragOverlay>
     </DndContext>
   );
+}
+
+function haveTasksChangedOrder(currentTasks: Task[], nextTasks: Task[]): boolean {
+  if (currentTasks.length !== nextTasks.length) {
+    return true;
+  }
+
+  return currentTasks.some((task, index) => {
+    const nextTask = nextTasks[index];
+    return (
+      task.id !== nextTask?.id ||
+      task.status !== nextTask.status ||
+      task.position !== nextTask.position
+    );
+  });
 }

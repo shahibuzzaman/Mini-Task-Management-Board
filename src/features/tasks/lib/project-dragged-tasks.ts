@@ -1,6 +1,8 @@
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
-import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
-import { orderTasksForBoard } from "@/features/tasks/lib/order-tasks-for-board";
+import {
+  flattenTaskGroups,
+  groupTasksByStatus,
+} from "@/features/tasks/lib/group-tasks-by-status";
 import type { Task, TaskGroupMap, TaskStatus } from "@/features/tasks/types/task";
 
 export type DragDestination = {
@@ -45,9 +47,9 @@ export function projectDraggedTasks({
 
   nextGroups[destination.status] = destinationTasks;
 
-  return orderTasksForBoard(
-    TASK_COLUMNS.flatMap((column) => nextGroups[column.status]),
-  );
+  return TASK_COLUMNS.flatMap((column) => nextGroups[column.status]).length === 0
+    ? []
+    : flattenTaskGroups(nextGroups);
 }
 
 function cloneTaskGroups(taskGroups: TaskGroupMap): TaskGroupMap {

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { BoardColumnDropZone } from "@/components/board/board-column-drop-zone";
 import { BoardEmptyState } from "@/components/board/board-empty-state";
@@ -10,7 +11,7 @@ type BoardColumnProps = {
   tasks: Task[];
 };
 
-export function BoardColumn({ title, status, tasks }: BoardColumnProps) {
+function BoardColumnComponent({ title, status, tasks }: BoardColumnProps) {
   return (
     <section className="flex min-h-80 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <header className="mb-4 flex items-center justify-between">
@@ -45,3 +46,5 @@ export function BoardColumn({ title, status, tasks }: BoardColumnProps) {
     </section>
   );
 }
+
+export const BoardColumn = memo(BoardColumnComponent);

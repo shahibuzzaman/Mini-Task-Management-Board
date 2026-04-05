@@ -13,3 +13,7 @@ export function groupTasksByStatus(tasks: Task[]): TaskGroupMap {
 
   return groups;
 }
+
+export function flattenTaskGroups(taskGroups: TaskGroupMap): Task[] {
+  return [...taskGroups.todo, ...taskGroups.in_progress, ...taskGroups.done];
+}

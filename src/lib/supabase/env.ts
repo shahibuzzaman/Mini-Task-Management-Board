@@ -32,7 +32,13 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+let browserSupabaseConfig: SupabaseBrowserConfig | null = null;
+
 export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
+  if (browserSupabaseConfig) {
+    return browserSupabaseConfig;
+  }
+
   const url = readEnvValue("NEXT_PUBLIC_SUPABASE_URL");
   const anonKey = readEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
@@ -45,20 +51,24 @@ export function getSupabaseBrowserConfig(): SupabaseBrowserConfig {
   });
 
   if (missingEnvVars.length > 0) {
-    return {
+    browserSupabaseConfig = {
       isConfigured: false,
       url: "",
       anonKey: "",
       missingEnvVars,
     };
+
+    return browserSupabaseConfig;
   }
 
-  return {
+  browserSupabaseConfig = {
     isConfigured: true,
     url,
     anonKey,
     missingEnvVars: [],
   };
+
+  return browserSupabaseConfig;
 }
 
 export function getSupabaseSetupMessage(): string {

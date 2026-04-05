@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Task } from "@/features/tasks/types/task";
 import { useUIStore } from "@/store/ui-store-provider";
 
@@ -9,7 +10,7 @@ type TaskCardProps = {
   isDragOverlay?: boolean;
 };
 
-export function TaskCard({
+function TaskCardComponent({
   task,
   dragHandleProps,
   isDragOverlay = false,
@@ -52,6 +53,8 @@ export function TaskCard({
     </article>
   );
 }
+
+export const TaskCard = memo(TaskCardComponent);
 
 function getVisibleTaskId(taskId: string): string {
   if (taskId.split("-")[0] === taskId) {

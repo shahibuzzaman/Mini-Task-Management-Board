@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getTasks } from "@/features/tasks/api/get-tasks";
 import { tasksQueryKeys } from "@/features/tasks/query-keys";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
@@ -12,5 +12,6 @@ export function useTasksQuery() {
     queryKey: tasksQueryKeys.list(),
     queryFn: getTasks,
     enabled: supabaseConfig.isConfigured,
+    placeholderData: keepPreviousData,
   });
 }

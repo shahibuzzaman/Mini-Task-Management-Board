@@ -1,4 +1,4 @@
-const POSITION_STEP = 1000;
+import { TASK_POSITION_STEP } from "@/features/tasks/lib/task-ordering";
 
 type GetInsertionPositionParams = {
   previousPosition?: number;
@@ -10,19 +10,19 @@ export function getInsertionPosition({
   nextPosition,
 }: GetInsertionPositionParams): number {
   if (previousPosition == null && nextPosition == null) {
-    return POSITION_STEP;
+    return TASK_POSITION_STEP;
   }
 
   if (previousPosition == null) {
     if (nextPosition == null) {
-      return POSITION_STEP;
+      return TASK_POSITION_STEP;
     }
 
-    return nextPosition - POSITION_STEP;
+    return nextPosition - TASK_POSITION_STEP;
   }
 
   if (nextPosition == null) {
-    return previousPosition + POSITION_STEP;
+    return previousPosition + TASK_POSITION_STEP;
   }
 
   return previousPosition + (nextPosition - previousPosition) / 2;
