@@ -8,18 +8,26 @@
 
 ## Database Setup
 
-- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql) has been applied
-- or [supabase/schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run manually
-- `public.tasks` exists
-- RLS is enabled
-- Demo anon `select`, `insert`, and `update` policies exist
-- Realtime is enabled for the `tasks` table in Supabase
+- [20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql) has been applied if migrating from the original scaffold
+- [20260405174500_add_auth_boards_and_rls.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405174500_add_auth_boards_and_rls.sql) has been applied
+- or [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) has been run for a manual setup path
+- `public.profiles`, `public.boards`, `public.board_members`, and `public.tasks` exist
+- RLS is enabled on all four tables
+- no demo-open anon task policies remain on the authenticated tables
+- Realtime is enabled for `public.tasks`
 
-## Seed Data
+## Auth Setup
 
-- [supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql) has been run
-- Example tasks exist in all 3 columns
-- Simulated users `alice`, `bob`, and `charlie` appear in seeded task metadata
+- email/password auth is enabled in the Supabase project
+- the project allows redirects to `/auth/callback`
+- the first signed-up user can access `/board`
+- `/board` redirects to `/auth` when signed out
+
+## Bootstrap / Seed Expectations
+
+- [seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql) has been applied if using CLI reset flow
+- understand that starter task data is created on first authenticated board access, not as anonymous SQL inserts
+- a signed-in user sees a shared board and starter tasks
 
 ## Validation
 
@@ -30,33 +38,40 @@
 
 ## Local Smoke Check
 
-- App loads with valid env vars
-- Board renders all 3 columns
-- Create task works
-- Edit task works
-- Drag within a column works
-- Drag across columns works
-- Realtime update appears in another tab without refresh
+- app loads with valid env vars
+- auth page renders
+- sign up works
+- log in works
+- `/board` is protected
+- account card shows display name and email
+- board renders all 3 columns
+- create task works
+- edit task works
+- drag within a column works
+- drag across columns works
+- realtime updates appear in another signed-in tab without refresh
 
 ## Vercel Deploy Checks
 
-- Repository is connected to Vercel
-- Production env vars are configured in Vercel
-- Remote Supabase project has received the migration or manual schema SQL
-- Latest commit is deployed
-- Build logs show a clean production build
-- Production URL loads successfully
-- Supabase URL and anon key point to the correct environment
+- repository is connected to Vercel
+- production env vars are configured in Vercel
+- target Supabase project has the authenticated schema applied
+- latest commit is deployed
+- build logs show a clean production build
+- production URL loads successfully
+- auth callback URL is allowed in Supabase
 
 ## Demo Recording Checklist
 
-- Clean seed data state before recording
-- Browser zoom and window size are readable
-- Prepare two tabs for realtime demo
-- Show the user switcher
-- Show create flow
-- Show edit flow
-- Show drag/drop reorder
-- Show drag/drop cross-column move
-- Show realtime sync across tabs
-- Mention trade-offs and intentionally omitted features
+- use a clean browser profile
+- start from `/auth`
+- show sign in or sign up
+- show protected redirect into `/board`
+- show account UI
+- show create flow
+- show edit flow
+- show drag/drop reorder
+- show drag/drop cross-column move
+- prepare two authenticated sessions for realtime
+- mention SSR auth, proxy refresh, route protection, and RLS
+- mention trade-offs and intentionally omitted features

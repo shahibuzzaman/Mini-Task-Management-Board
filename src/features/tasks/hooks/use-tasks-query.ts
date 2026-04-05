@@ -3,15 +3,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getTasks } from "@/features/tasks/api/get-tasks";
 import { tasksQueryKeys } from "@/features/tasks/query-keys";
-import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 
-export function useTasksQuery() {
-  const supabaseConfig = getSupabaseBrowserConfig();
-
+export function useTasksQuery(boardId: string) {
   return useQuery({
-    queryKey: tasksQueryKeys.list(),
+    queryKey: tasksQueryKeys.list(boardId),
     queryFn: getTasks,
-    enabled: supabaseConfig.isConfigured,
+    enabled: boardId.length > 0,
     placeholderData: keepPreviousData,
   });
 }

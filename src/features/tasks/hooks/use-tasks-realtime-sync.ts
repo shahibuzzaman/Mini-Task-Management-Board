@@ -2,47 +2,34 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { mapTaskRowToTask } from "@/features/tasks/lib/map-task-row-to-task";
-import { upsertTaskInTasksCache } from "@/features/tasks/lib/upsert-task-in-tasks-cache";
 import { tasksQueryKeys } from "@/features/tasks/query-keys";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
-import type { Database } from "@/types/database";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const TASKS_REALTIME_CHANNEL = "tasks-realtime-sync";
 
-type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
-
-export function useTasksRealtimeSync() {
+export function useTasksRealtimeSync(boardId: string) {
   const queryClient = useQueryClient();
-  const supabaseConfig = getSupabaseBrowserConfig();
   const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
-    if (!supabaseConfig.isConfigured || !supabase) {
+    if (!supabase || boardId.length === 0) {
       return;
     }
 
-    function applyRealtimeRow(row: TaskRow) {
-      const task = mapTaskRowToTask(row);
-      const didPatchCache = upsertTaskInTasksCache(queryClient, task);
-
-      if (!didPatchCache) {
-        void queryClient.invalidateQueries({ queryKey: tasksQueryKeys.list() });
-      }
-    }
-
     const channel = supabase
-      .channel(TASKS_REALTIME_CHANNEL)
+      .channel(`${TASKS_REALTIME_CHANNEL}-${boardId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "tasks",
+          filter: `board_id=eq.${boardId}`,
         },
-        (payload) => {
-          applyRealtimeRow(payload.new as TaskRow);
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: tasksQueryKeys.list(boardId),
+          });
         },
       )
       .on(
@@ -51,9 +38,12 @@ export function useTasksRealtimeSync() {
           event: "UPDATE",
           schema: "public",
           table: "tasks",
+          filter: `board_id=eq.${boardId}`,
         },
-        (payload) => {
-          applyRealtimeRow(payload.new as TaskRow);
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: tasksQueryKeys.list(boardId),
+          });
         },
       )
       .subscribe();
@@ -61,5 +51,5 @@ export function useTasksRealtimeSync() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [queryClient, supabase, supabaseConfig.isConfigured]);
+  }, [boardId, queryClient, supabase]);
 }

@@ -2,103 +2,121 @@
 
 ## Intro
 
-Start on the board home page.
+Start on `/auth`.
 
 Say:
 
-"This is my mini task management board take-home. It uses Next.js App Router,
-Supabase for persistence and realtime, TanStack Query for server state, Zustand
-for UI-only state, and `dnd-kit` for drag and drop."
-
-Point out:
-
-- 3 columns
-- simulated user switcher
-- create button
-- existing seed data
-
-## Architecture
-
-Say:
-
-"I kept the state boundaries explicit. TanStack Query owns task data, mutations,
-optimistic updates, and cache reconciliation. Zustand only stores local UI
-state like the active simulated user and whether the task form is open."
-
-Optionally show:
-
-- `src/features/tasks/`
-- `src/store/ui-store.ts`
-- `src/components/board/`
-
-## Add And Edit
-
-Create flow:
-
-1. Select `alice` or another simulated user.
-2. Click `Create task`.
-3. Add a title, description, and target column.
-4. Submit.
-
-Say:
-
-"Create uses an optimistic cache update first, then reconciles with the server
-response. The `updated_by` field comes from the simulated user."
-
-Edit flow:
-
-1. Open a task’s `Edit` action.
-2. Change title, description, or column.
-3. Save.
-
-Say:
-
-"Edit follows the same pattern: optimistic update, rollback on error, then
-final reconciliation against Supabase."
-
-## Drag And Drop
+"This is my authenticated mini task management board. I kept the original
+Kanban product surface, but replaced the simulated-user demo with real
+Supabase Auth, server-protected routes, and RLS-backed authorization."
 
 Show:
 
-1. Reordering a task within the same column
-2. Moving a task into another column
+- login / sign-up screen
+- clean, minimal auth UI
+
+## Auth Architecture
 
 Say:
 
-"Drag and drop persists `status` and `position`. Order is not based on array
-index. Instead, the app computes a midpoint position from neighboring tasks so
-common moves do not require rewriting an entire column."
+"The important change is that auth is SSR-aware. The app uses separate browser
+and server Supabase clients, a proxy for cookie refresh, protected App Router
+routes, and route handlers for task writes so the browser never decides actor
+identity."
 
-## Realtime Demo
+Optionally show:
 
-Open two tabs.
+- `src/lib/supabase/browser.ts`
+- `src/lib/supabase/server.ts`
+- `src/proxy.ts`
+- `supabase/migrations/20260405174500_add_auth_boards_and_rls.sql`
+
+## Sign Up / Log In
+
+1. Create a user or log in with an existing account.
+2. Let the app redirect to `/board`.
+
+Say:
+
+"On first authenticated access, the server ensures the user has a profile,
+creates or joins the shared board, and bootstraps starter tasks if the board is
+empty."
+
+## Board And Account UI
+
+Show:
+
+- account card with display name and email
+- protected board shell
+- three columns with tasks
+
+Say:
+
+"Zustand now stores only modal and editing UI state. TanStack Query owns the
+task list and mutations. Auth state comes from Supabase, not from Zustand."
+
+## Create And Edit
+
+1. Click `Create task`
+2. Add title, description, and target column
+3. Submit
+4. Edit the created task and save
+
+Say:
+
+"Create and edit still use optimistic updates, but the actor fields are stamped
+by the server and database triggers from the authenticated session."
+
+## Drag And Drop
+
+1. Reorder a task inside the same column
+2. Move a task to another column
+
+Say:
+
+"Ordering is persisted with midpoint-based `position` values rather than array
+index, so common moves do not require rewriting the full column."
+
+## Realtime
+
+Open a second authenticated tab or sign in as another user in another browser.
 
 In tab A:
 
-1. Create, edit, or drag a task.
+1. Create, edit, or move a task
 
 In tab B:
 
-1. Show the board updating without refresh.
+1. Show the board updating without refresh
 
 Say:
 
-"Realtime subscribes once from the board shell to task inserts and updates.
-When an event comes in, I patch the query cache directly if the list is already
-loaded. If not, I fall back to targeted invalidation."
+"Realtime is scoped to the authenticated board. The client subscribes to task
+changes filtered by `board_id`, and invalidates the board query when updates
+arrive."
+
+## Authorization
+
+Say:
+
+"Authorization is RLS-first. Profiles, board membership, and tasks are all
+guarded in the database. The app route handlers use a server Supabase client
+with verified auth cookies, and the board route itself is protected on the
+server."
 
 ## Trade-Offs
 
 Say:
 
-"For take-home scope, I intentionally did not add authentication, delete,
-rebalance logic for dense ordering gaps, or heavy conflict resolution. The goal
-was a clean, explainable vertical slice with correct boundaries and good UX."
+"For this pass, I kept the product as a single shared authenticated board. I
+did not add invitations, admin tooling, MFA, SSO, or membership management UI.
+The goal was a strong first production-shaped auth pass without rewriting the
+existing app."
 
 ## Closing
 
 Say:
 
-"The final result supports create, edit, drag-and-drop ordering, optimistic UI,
-and realtime sync across sessions while keeping server state and UI state
-strictly separated."
+"The final result keeps the original Kanban experience, but now the board is
+backed by real authentication, SSR session handling, route protection, and
+database-enforced authorization."

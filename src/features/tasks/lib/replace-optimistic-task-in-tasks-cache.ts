@@ -5,17 +5,20 @@ import type { Task } from "@/features/tasks/types/task";
 
 export function replaceOptimisticTaskInTasksCache(
   queryClient: QueryClient,
+  boardId: string,
   optimisticTaskId: string,
   serverTask: Task,
 ): boolean {
-  const currentTasks = queryClient.getQueryData<Task[]>(tasksQueryKeys.list());
+  const currentTasks = queryClient.getQueryData<Task[]>(
+    tasksQueryKeys.list(boardId),
+  );
 
   if (!currentTasks) {
     return false;
   }
 
   queryClient.setQueryData<Task[]>(
-    tasksQueryKeys.list(),
+    tasksQueryKeys.list(boardId),
     orderTasksForBoard([
       ...currentTasks.filter(
         (task) => task.id !== optimisticTaskId && task.id !== serverTask.id,

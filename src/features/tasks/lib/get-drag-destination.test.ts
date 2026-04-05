@@ -65,11 +65,13 @@ describe("getDragDestination", () => {
 function createTask(overrides: Pick<Task, "id" | "status" | "position">): Task {
   return {
     id: overrides.id,
+    boardId: "board-1",
     title: "Task",
     description: "Description",
     status: overrides.status,
     position: overrides.position,
-    updatedBy: "alice",
+    updatedById: "user-1",
+    updatedByName: "Alice",
     createdAt: "2026-04-05T00:00:00.000Z",
     updatedAt: "2026-04-05T00:00:00.000Z",
   };

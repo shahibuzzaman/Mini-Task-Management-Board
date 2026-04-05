@@ -4,6 +4,8 @@ import { tasksQueryKeys } from "../query-keys";
 import type { Task } from "../types/task";
 import { upsertTaskInTasksCache } from "./upsert-task-in-tasks-cache";
 
+const BOARD_ID = "board-1";
+
 describe("upsertTaskInTasksCache", () => {
   it("replaces an existing task and keeps the column ordered by position", () => {
     const queryClient = new QueryClient();
@@ -20,10 +22,11 @@ describe("upsertTaskInTasksCache", () => {
       }),
     ];
 
-    queryClient.setQueryData(tasksQueryKeys.list(), tasks);
+    queryClient.setQueryData(tasksQueryKeys.list(BOARD_ID), tasks);
 
     const didPatch = upsertTaskInTasksCache(
       queryClient,
+      BOARD_ID,
       createTask({
         id: "task-b",
         status: "todo",
@@ -34,7 +37,9 @@ describe("upsertTaskInTasksCache", () => {
 
     expect(didPatch).toBe(true);
     expect(
-      queryClient.getQueryData<Task[]>(tasksQueryKeys.list())?.map((task) => task.id),
+      queryClient
+        .getQueryData<Task[]>(tasksQueryKeys.list(BOARD_ID))
+        ?.map((task) => task.id),
     ).toEqual(["task-b", "task-a"]);
   });
 });
@@ -42,11 +47,13 @@ describe("upsertTaskInTasksCache", () => {
 function createTask(overrides: Partial<Task> & Pick<Task, "id" | "status" | "position">): Task {
   return {
     id: overrides.id,
+    boardId: BOARD_ID,
     title: "Task",
     description: "Description",
     status: overrides.status,
     position: overrides.position,
-    updatedBy: "alice",
+    updatedById: "user-1",
+    updatedByName: "Alice",
     createdAt: "2026-04-05T00:00:00.000Z",
     updatedAt: overrides.updatedAt ?? "2026-04-05T00:00:00.000Z",
   };

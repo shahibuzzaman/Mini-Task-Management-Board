@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { AuthViewer } from "@/features/auth/types/viewer";
+import type { BoardSummary } from "@/features/boards/types/board";
 import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TaskFormModal } from "@/components/board/task-form-modal";
 import { TaskBoard } from "@/components/board/task-board";
@@ -17,17 +19,21 @@ type FeedbackState = {
   message: string;
 } | null;
 
-export function TaskBoardShell() {
-  const activeUser = useUIStore((state) => state.activeUser);
+type TaskBoardShellProps = {
+  board: BoardSummary;
+  viewer: AuthViewer;
+};
+
+export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const isTaskFormOpen = useUIStore((state) => state.isTaskFormOpen);
   const editingTaskId = useUIStore((state) => state.editingTaskId);
   const closeTaskForm = useUIStore((state) => state.closeTaskForm);
-  const tasksQuery = useTasksQuery();
-  const createTaskMutation = useCreateTaskMutation();
-  const updateTaskMutation = useUpdateTaskMutation();
+  const tasksQuery = useTasksQuery(board.id);
+  const createTaskMutation = useCreateTaskMutation(board.id, viewer);
+  const updateTaskMutation = useUpdateTaskMutation(board.id, viewer);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
 
-  useTasksRealtimeSync();
+  useTasksRealtimeSync(board.id);
 
   const editingTask = useMemo(() => {
     if (!editingTaskId) {
@@ -61,7 +67,6 @@ export function TaskBoardShell() {
           description: values.description,
           status: values.status,
           position,
-          updatedBy: activeUser,
         });
         closeTaskForm();
         setFeedback({
@@ -78,7 +83,6 @@ export function TaskBoardShell() {
         description: values.description,
         status: values.status,
         position,
-        updatedBy: activeUser,
       });
       closeTaskForm();
       setFeedback({
@@ -103,7 +107,7 @@ export function TaskBoardShell() {
           onDismiss={() => setFeedback(null)}
         />
       ) : null}
-      <TaskBoard />
+      <TaskBoard board={board} viewer={viewer} />
       <TaskFormModal
         mode={editingTask ? "edit" : "create"}
         task={editingTask}

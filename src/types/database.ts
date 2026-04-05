@@ -7,37 +7,110 @@ export type Json =
   | Json[];
 
 export type TaskStatus = "todo" | "in_progress" | "done";
+export type BoardRole = "owner" | "member";
 
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          display_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          display_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      boards: {
+        Row: {
+          id: string;
+          name: string;
+          owner_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          owner_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      board_members: {
+        Row: {
+          board_id: string;
+          user_id: string;
+          role: BoardRole;
+          created_at: string;
+        };
+        Insert: {
+          board_id: string;
+          user_id: string;
+          role?: BoardRole;
+          created_at?: string;
+        };
+        Update: {
+          board_id?: string;
+          user_id?: string;
+          role?: BoardRole;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           id: string;
+          board_id: string;
           title: string;
           description: string;
           status: TaskStatus;
           position: number;
+          created_by: string;
           updated_by: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
+          board_id: string;
           title: string;
           description?: string;
           status?: TaskStatus;
           position: number;
-          updated_by: string;
+          created_by?: string;
+          updated_by?: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
+          board_id?: string;
           title?: string;
           description?: string;
           status?: TaskStatus;
           position?: number;
+          created_by?: string;
           updated_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -46,7 +119,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      ensure_current_user_shared_board: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

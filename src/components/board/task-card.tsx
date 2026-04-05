@@ -48,7 +48,7 @@ function TaskCardComponent({
       </h3>
       <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
       <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-        Updated by {task.updatedBy}
+        Updated by {task.updatedByName}
       </p>
     </article>
   );

@@ -20,7 +20,8 @@ import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { TaskCard } from "@/components/board/task-card";
-import { useHasMounted } from "@/components/board/use-has-mounted";
+import type { AuthViewer } from "@/features/auth/types/viewer";
+import type { BoardSummary } from "@/features/boards/types/board";
 import { useMoveTaskMutation } from "@/features/tasks/hooks/use-move-task-mutation";
 import { getDragDestination } from "@/features/tasks/lib/get-drag-destination";
 import { getDragMovePayload } from "@/features/tasks/lib/get-drag-move-payload";
@@ -29,20 +30,20 @@ import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
 import { projectDraggedTasks } from "@/features/tasks/lib/project-dragged-tasks";
 import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
 import type { Task } from "@/features/tasks/types/task";
-import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
-import { useUIStore } from "@/store/ui-store-provider";
 
 type FeedbackState = {
   kind: "success" | "error";
   message: string;
 } | null;
 
-export function TaskBoard() {
-  const hasMounted = useHasMounted();
-  const supabaseConfig = getSupabaseBrowserConfig();
-  const activeUser = useUIStore((state) => state.activeUser);
-  const tasksQuery = useTasksQuery();
-  const moveTaskMutation = useMoveTaskMutation();
+type TaskBoardProps = {
+  board: BoardSummary;
+  viewer: AuthViewer;
+};
+
+export function TaskBoard({ board, viewer }: TaskBoardProps) {
+  const tasksQuery = useTasksQuery(board.id);
+  const moveTaskMutation = useMoveTaskMutation(board.id, viewer);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -68,27 +69,6 @@ export function TaskBoard() {
     () => resolvedTasks.find((task) => task.id === activeTaskId),
     [activeTaskId, resolvedTasks],
   );
-
-  if (!hasMounted) {
-    return <BoardLoadingState />;
-  }
-
-  if (!supabaseConfig.isConfigured) {
-    return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-950">Board</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Configure Supabase to load tasks. The active simulated user is{" "}
-              <span className="font-semibold text-slate-900">{activeUser}</span>.
-            </p>
-          </div>
-          <TaskBoardActions disabled />
-        </div>
-      </section>
-    );
-  }
 
   if (tasksQuery.isLoading) {
     return <BoardLoadingState />;
@@ -145,7 +125,6 @@ export function TaskBoard() {
     const movePayload = getDragMovePayload({
       tasks: nextTasks,
       taskId: String(event.active.id),
-      updatedBy: activeUser,
     });
 
     setProjectedTasks(null);
@@ -201,16 +180,19 @@ export function TaskBoard() {
       <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur sm:p-6">
         <div className="mb-6 flex flex-col gap-2 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">Board</h2>
+            <h2 className="text-xl font-semibold text-slate-950">{board.name}</h2>
             <p className="text-sm leading-6 text-slate-600">
-              Drag tasks within or across columns. Status and midpoint-based
-              positions persist on drop.
+              Drag tasks within or across columns. Membership and actor identity
+              are enforced server-side through authenticated route handlers and
+              database policies.
             </p>
           </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
             <p className="text-sm text-slate-500">
-              Viewing as{" "}
-              <span className="font-semibold text-slate-900">{activeUser}</span>
+              Signed in as{" "}
+              <span className="font-semibold text-slate-900">
+                {viewer.displayName}
+              </span>
             </p>
             <TaskBoardActions />
           </div>

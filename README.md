@@ -1,42 +1,59 @@
 # Mini Task Management Board
 
-A take-home implementation of a collaborative task board with:
+A production-shaped take-home implementation of a collaborative Kanban board
+with:
 
-- 3 columns: `todo`, `in_progress`, `done`
-- create and edit flows
-- drag-and-drop reorder and cross-column moves
-- Supabase persistence and realtime sync
+- Supabase Auth with cookie-backed SSR sessions
+- a protected shared board
+- create, edit, reorder, and cross-column task moves
 - optimistic UI for mutations
-- simulated multi-user switching without authentication
+- realtime sync across signed-in users
+- strict separation between UI state and server state
 
 ## Architecture Overview
 
-The app uses a strict split between UI state and server state.
+The app is built around four explicit responsibilities:
 
-- `Next.js App Router` provides the shell and client/server boundaries.
+- `Next.js App Router` provides the shell, protected routes, route handlers, and
+  auth callback flow.
+- `Supabase Auth + @supabase/ssr` provide cookie-based session handling for both
+  server rendering and browser auth flows.
 - `TanStack Query` owns server state only:
-  task fetching, mutations, optimistic cache updates, rollback, reconciliation,
-  and invalidation.
+  task fetching, optimistic updates, rollback, cache reconciliation, and
+  invalidation.
 - `Zustand` owns UI state only:
-  simulated active user, task form open/close state, and `editingTaskId`.
-- `Supabase` owns persistence and realtime delivery.
-- `dnd-kit` handles drag-and-drop interactions.
+  task form open/close state and `editingTaskId`.
 
-The main design goal was to keep the vertical slice easy to explain in a
-take-home review rather than overbuilding abstractions.
+The browser never decides actor identity for task writes. Authenticated route
+handlers and database triggers stamp `created_by` and `updated_by`, and Row
+Level Security remains the source of truth for access control.
 
 ## Folder Structure
 
 ```text
 src/
   app/
+    api/
+      tasks/
+    auth/
+      callback/
+      page.tsx
+    board/
+      page.tsx
     layout.tsx
     page.tsx
     providers.tsx
+    proxy.ts
   components/
     board/
-      ...
   features/
+    auth/
+      components/
+      lib/
+      types/
+    boards/
+      lib/
+      types/
     tasks/
       api/
       hooks/
@@ -44,6 +61,7 @@ src/
       types/
       query-keys.ts
   lib/
+    query/
     supabase/
   store/
   types/
@@ -59,201 +77,218 @@ docs/
 
 Structure rules:
 
-- `features/tasks/api`: Supabase request functions
-- `features/tasks/hooks`: query, mutation, and realtime hooks
-- `features/tasks/lib`: pure helpers for ordering, cache updates, drag projection
-- `components/board`: presentation and interaction components
+- `features/auth`: auth forms, auth helpers, and viewer types
+- `features/boards`: current shared-board bootstrap and board metadata helpers
+- `features/tasks/api`: client-side fetchers for authenticated app APIs
+- `features/tasks/hooks`: TanStack Query hooks and realtime wiring
+- `features/tasks/lib`: ordering helpers, task mapping, optimistic cache helpers
+- `lib/supabase`: browser, server, and proxy-safe Supabase clients
 - `store`: Zustand UI-only state
+
+## Auth Strategy
+
+This project now uses `email + password` authentication.
+
+Why this choice:
+
+- it fits the existing form-driven UX cleanly
+- it does not require a separate passwordless callback-first experience
+- it keeps local and hosted setup simple
+
+Implemented auth flow:
+
+- sign up with `display_name`, email, and password
+- log in with email and password
+- handle Supabase auth callback at `/auth/callback`
+- sign out from the authenticated board shell
+- protect `/board` server-side
+- redirect `/` to `/board` or `/auth` based on the verified session
+
+## Supabase SSR Client Setup
+
+There are separate Supabase clients for distinct runtimes:
+
+- [browser.ts](/Users/mac/Desktop/mini-task-management-board/src/lib/supabase/browser.ts)
+  creates the browser client for auth actions and realtime subscriptions.
+- [server.ts](/Users/mac/Desktop/mini-task-management-board/src/lib/supabase/server.ts)
+  creates the cookie-aware server client for server components and route
+  handlers.
+- [proxy.ts](/Users/mac/Desktop/mini-task-management-board/src/proxy.ts)
+  refreshes auth cookies before requests hit the app.
+
+The protected board page and task APIs use `auth.getUser()` on the server so
+authorization decisions are based on a verified identity rather than browser
+state.
 
 ## State Boundaries
 
-### Why Zustand For UI State Only
+### Why Zustand Is Used For UI State Only
 
-Zustand is used only for transient interface concerns:
+Zustand stores only transient UI concerns:
 
-- active simulated user
 - whether the task form is open
 - which task is being edited
 
-Those values are local to the browser session and do not represent canonical
-backend data. Keeping them in Zustand prevents accidental duplication of server
-records.
+The authenticated user, board membership, and task list are not duplicated into
+Zustand.
 
-### Why TanStack Query For Server State Only
+### Why TanStack Query Is Used For Server State Only
 
-TanStack Query owns the task list because it handles:
+TanStack Query owns:
 
-- loading and caching
-- optimistic updates
-- rollback on mutation failure
-- server reconciliation after mutation success
-- targeted invalidation when realtime patching is not safe
+- task reads from authenticated API routes
+- optimistic create, edit, and move flows
+- rollback on failure
+- reconciliation with server responses
+- targeted invalidation after mutations and realtime updates
 
-This keeps Supabase-backed task data in one place instead of mirroring it into
-Zustand or component-local copies.
+This keeps the board’s server-backed data model centralized and explainable.
 
-## Supabase Data Model
+## Data Model
 
-The project uses a single `tasks` table:
+The authenticated model uses:
+
+### `public.profiles`
+
+```sql
+id uuid primary key references auth.users(id) on delete cascade
+display_name text
+created_at timestamptz not null
+updated_at timestamptz not null
+```
+
+### `public.boards`
 
 ```sql
 id uuid primary key
+name text not null unique
+owner_id uuid references public.profiles(id)
+created_at timestamptz not null
+updated_at timestamptz not null
+```
+
+### `public.board_members`
+
+```sql
+board_id uuid references public.boards(id) on delete cascade
+user_id uuid references public.profiles(id) on delete cascade
+role text check role in ('owner', 'member')
+primary key (board_id, user_id)
+```
+
+### `public.tasks`
+
+```sql
+id uuid primary key
+board_id uuid references public.boards(id) on delete cascade
 title text not null
 description text not null default ''
 status text check in ('todo', 'in_progress', 'done')
 position double precision not null
-updated_by text not null
+created_by uuid references public.profiles(id)
+updated_by uuid references public.profiles(id)
 created_at timestamptz not null
 updated_at timestamptz not null
 ```
 
 Supporting files:
 
-- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql)
-- [supabase/schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql)
-- [supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql)
+- [20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql)
+- [20260405174500_add_auth_boards_and_rls.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405174500_add_auth_boards_and_rls.sql)
+- [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql)
 
-The schema includes demo-only anon policies for `select`, `insert`, and
-`update`. That is acceptable for this take-home but should not be treated as a
-production auth model.
+## Authorization And RLS Approach
 
-## Supabase CLI Migration Setup
+Authorization is RLS-first.
 
-The repo is now set up for Supabase CLI migrations.
+High-level rules:
 
-Files:
+- users can manage their own profile
+- users can read boards they belong to
+- users can read memberships for boards they belong to
+- users can read, insert, and update tasks only inside boards they belong to
+- task actor identity is stamped by a database trigger from `auth.uid()`
 
-- [supabase/config.toml](/Users/mac/Desktop/mini-task-management-board/supabase/config.toml)
-- [supabase/migrations/20260405101702_create_tasks_table.sql](/Users/mac/Desktop/mini-task-management-board/supabase/migrations/20260405101702_create_tasks_table.sql)
-- [supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql)
+Helper database functions:
 
-Useful scripts:
+- `public.is_board_member(uuid)`
+- `public.is_board_owner(uuid)`
+- `public.ensure_current_user_shared_board()`
 
-```bash
-npm run db:start
-npm run db:stop
-npm run db:status
-npm run db:reset
-npm run db:push
-```
+The current product surface exposes a single shared board. On first authenticated
+access, the app ensures:
 
-Notes:
+1. the user has a profile
+2. a shared board exists
+3. the user is a member of that board
+4. initial sample tasks exist if the board is empty
 
-- `db:reset` applies migrations and then runs `supabase/seed.sql`
-- `db:push` pushes local migrations to a linked remote Supabase project
-- `db:start` requires Docker because the Supabase CLI runs the local stack in
-  containers
+## Route Protection
 
-## Realtime Implementation Approach
+Protected app behavior:
 
-Realtime is wired through a single hook:
+- `/board` is server-protected and redirects unauthenticated users to `/auth`
+- `/auth` redirects authenticated users back to `/board`
+- `/` resolves to the correct destination from the server
 
-- [use-tasks-realtime-sync.ts](/Users/mac/Desktop/mini-task-management-board/src/features/tasks/hooks/use-tasks-realtime-sync.ts)
+This is intentionally not client-only protection.
 
-Behavior:
+## Task Data Flow
 
-- subscribes once from the board shell
-- listens to `INSERT` and `UPDATE` on `public.tasks`
-- maps the incoming row into the app `Task` type
-- patches the TanStack Query cache directly when the tasks list is already in
-  cache
-- falls back to invalidation when the list is not ready
+Task reads and writes now go through authenticated Next route handlers:
+
+- `GET /api/tasks`
+- `POST /api/tasks`
+- `PATCH /api/tasks/[taskId]`
+
+Why:
+
+- keeps the browser from stamping actor identity
+- keeps task authorization behind server-verified sessions
+- makes the trust boundary easy to explain in review
+
+## Realtime Implementation
+
+Realtime remains Supabase-based, but it is now scoped to the authenticated
+board:
+
+- the browser subscribes to `public.tasks`
+- the subscription uses a `board_id` filter
+- incoming insert and update events invalidate the board’s query cache
 
 Trade-off:
 
-- this is intentionally lightweight
-- there is no heavy conflict resolution layer
-- the server remains the source of truth
+- direct cache patching was intentionally replaced with targeted invalidation in
+  realtime because the event payload does not include joined profile display
+  data, and correctness is more important here than being clever
 
 ## Ordering Strategy With `position`
 
-Persisted order is based on the numeric `position` field, not array index.
+Persisted order is based on numeric `position`, not array index.
 
 Rules:
 
 - new tasks go to the end of the chosen column
-- drag-and-drop computes the new position from neighbors
+- drag and drop computes the new position from neighboring tasks
 - inserts and reorders use midpoint spacing
-- canonical task ordering sorts by `position` within each status column
+- canonical ordering sorts by `position` within each status column
 
-This keeps order persistence stable and easy to explain:
-
-- no index-as-truth coupling
-- no full-column rewrites for common moves
-- rebalance logic is intentionally not added yet because it is not necessary for
-  the current take-home slice
+This avoids full-column rewrites for common moves while keeping the logic easy
+to explain.
 
 ## Optimistic UI Approach
 
-Create, edit, and move mutations all use `onMutate` to update the query cache
-before the network round-trip completes.
+Create, edit, and move mutations use `onMutate`:
 
-Pattern:
-
-1. cancel the in-flight tasks query
-2. snapshot previous cached tasks
-3. write an optimistic task change into the query cache
-4. rollback to the snapshot on error
+1. cancel the in-flight tasks query for the current board
+2. snapshot the previous cached list
+3. write an optimistic task change
+4. rollback on error
 5. reconcile with the server response on success
-6. invalidate on settle to keep the cache aligned with Supabase
+6. invalidate on settle
 
-This gives fast feedback without moving server state into Zustand.
-
-## Setup Steps
-
-### Option A: Supabase Dashboard Only
-
-1. Install dependencies.
-2. Create a Supabase project.
-3. Copy `.env.example` to `.env.local`.
-4. Add the public Supabase URL and anon key.
-5. Run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql).
-6. Run [seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql).
-7. Start the app locally.
-
-### Option B: Supabase CLI Migration Workflow
-
-1. Install dependencies.
-2. Install Docker if you want the full local Supabase stack.
-3. Copy `.env.example` to `.env.local`.
-4. Add the public Supabase URL and anon key.
-5. Start the local Supabase stack:
-
-```bash
-npm run db:start
-```
-
-6. Apply migrations and seed local data:
-
-```bash
-npm run db:reset
-```
-
-7. Start the app:
-
-```bash
-npm run dev
-```
-
-### Push Migrations To A Remote Supabase Project
-
-Authenticate the Supabase CLI first:
-
-```bash
-npx supabase login
-```
-
-Link the repo to your remote project:
-
-```bash
-npx supabase link --project-ref <your-project-ref>
-```
-
-Then push the migrations:
-
-```bash
-npm run db:push
-```
+Optimistic rows use the authenticated viewer’s `displayName` for temporary UI
+feedback, but the server still stamps the canonical actor fields.
 
 ## Environment Variables
 
@@ -270,22 +305,43 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
-Env handling notes:
+No service-role key is required for this app.
 
-- env parsing is validated in `src/lib/supabase/env.ts`
-- invalid or missing values do not crash the app at import time
-- the UI shows setup messaging instead of throwing
+## Setup
 
-## Local Development
+### Hosted Supabase
 
-Install and run:
+1. Install dependencies:
 
 ```bash
 npm install
+```
+
+2. Copy env values into `.env.local`.
+3. Apply the schema:
+   - run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) in the SQL Editor, or
+   - push migrations with the CLI
+4. Start the app:
+
+```bash
 npm run dev
 ```
 
-If you want local Supabase services instead of a hosted project:
+5. Open `http://localhost:3000`
+6. Sign up for an account
+7. The first authenticated visit to `/board` will create the shared board,
+   membership, and starter tasks
+
+### Supabase CLI Workflow
+
+```bash
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npm run db:push
+npm run dev
+```
+
+For local Supabase:
 
 ```bash
 npm run db:start
@@ -293,13 +349,23 @@ npm run db:reset
 npm run dev
 ```
 
-If you want to use your hosted Supabase project instead of the local CLI stack:
+## Migration / Reset Notes
 
-1. Set `.env.local`
-2. Apply the schema and seed
-3. Run `npm run dev`
+This auth pass introduces a clean reset path rather than attempting to map the
+old simulated `alice/bob/charlie` text attribution into real auth user IDs.
 
-Validation:
+What happens:
+
+- the old public `tasks` table is moved out of the primary app surface
+- the new authenticated schema becomes canonical
+- starter tasks are created after first authenticated board access
+
+This keeps the migration safe and reviewable without inventing fake identity
+mapping.
+
+## Validation
+
+Run:
 
 ```bash
 npm run lint
@@ -308,55 +374,40 @@ npm run build
 npm run test
 ```
 
-Open `http://localhost:3000`.
-
-For realtime testing, open two browser tabs with the same local app.
-
 ## Deployment Steps
 
-Typical Vercel deployment flow:
-
-1. Push the repository to GitHub.
-2. Import the repo into Vercel.
+1. Push the repo to GitHub.
+2. Import the repository into Vercel.
 3. Add:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. Ensure the target Supabase project has the schema applied:
-   - run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) manually, or
-   - link the project and run `npm run db:push`
-5. Seed the target project if you want demo content.
-6. Trigger a production deployment.
+4. Apply migrations or run [schema.sql](/Users/mac/Desktop/mini-task-management-board/supabase/schema.sql) on the target Supabase project.
+5. Deploy.
+6. Sign up for a real user in production.
 7. Verify:
-   - board loads
-   - create works
-   - edit works
-   - drag/drop persists
-   - realtime sync works across two tabs
+   - auth works
+   - `/board` is protected
+   - create/edit/move work
+   - realtime works across two signed-in sessions
 
-## Trade-Offs And Assumptions
+## Trade-Offs And Limitations
 
-- No authentication was added by design.
-- `updated_by` comes from the simulated user selector, not a real identity
-  provider.
-- Realtime covers inserts and updates only.
-- Delete is intentionally not implemented.
-- Drag ordering uses midpoint spacing without rebalance logic.
-- Feedback is lightweight inline messaging instead of a full toast framework.
-- Tests focus on the highest-value pure utilities rather than full UI or
-  end-to-end coverage.
+- The current UI exposes one authenticated shared board, not a multi-board
+  switcher.
+- Membership management is intentionally conservative and not exposed in the
+  UI yet.
+- Delete is still not implemented.
+- Realtime handles inserts and updates; delete handling is still omitted.
+- Midpoint ordering still does not include a rebalance job for dense gaps.
+- There is no MFA, SSO, admin tooling, or advanced RBAC in this pass.
 
 ## What Was Intentionally Not Built
 
-- authentication and authorization
+- enterprise auth features
+- MFA
+- SSO
+- admin membership tooling
+- board invitation flows
+- role escalation flows beyond `owner` and `member`
 - delete flow
-- realtime delete handling
-- background rebalance for very tight `position` gaps
-- full conflict resolution between concurrent edits
-- end-to-end or browser automation tests
-- advanced component library or design system abstraction
-
-## Demo Policy Note
-
-The SQL policies are demo-friendly and intentionally permissive for anon access.
-That keeps setup simple for a take-home review, but it is not a production-ready
-security model.
+- full conflict resolution for concurrent edits

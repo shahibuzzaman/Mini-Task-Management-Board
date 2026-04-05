@@ -5,9 +5,10 @@ import type { Task } from "@/features/tasks/types/task";
 
 export function upsertTaskInTasksCache(
   queryClient: QueryClient,
+  boardId: string,
   incomingTask: Task,
 ): boolean {
-  const currentTasks = queryClient.getQueryData<Task[]>(tasksQueryKeys.list());
+  const currentTasks = queryClient.getQueryData<Task[]>(tasksQueryKeys.list(boardId));
 
   if (!currentTasks) {
     return false;
@@ -16,7 +17,7 @@ export function upsertTaskInTasksCache(
   const hasExistingTask = currentTasks.some((task) => task.id === incomingTask.id);
 
   queryClient.setQueryData<Task[]>(
-    tasksQueryKeys.list(),
+    tasksQueryKeys.list(boardId),
     orderTasksForBoard(
       hasExistingTask
         ? currentTasks.map((task) =>

@@ -5,20 +5,17 @@ import type { Task, TaskStatus } from "@/features/tasks/types/task";
 type GetDragMovePayloadParams = {
   tasks: Task[];
   taskId: string;
-  updatedBy: string;
 };
 
 export type DragMovePayload = {
   id: string;
   status: TaskStatus;
   position: number;
-  updatedBy: string;
 };
 
 export function getDragMovePayload({
   tasks,
   taskId,
-  updatedBy,
 }: GetDragMovePayloadParams): DragMovePayload | null {
   const taskGroups = groupTasksByStatus(tasks);
   const activeTask = tasks.find((task) => task.id === taskId);
@@ -44,6 +41,5 @@ export function getDragMovePayload({
       previousPosition: previousTask?.position,
       nextPosition: nextTask?.position,
     }),
-    updatedBy,
   };
 }

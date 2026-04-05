@@ -1,4 +1,4 @@
 export const tasksQueryKeys = {
   all: ["tasks"] as const,
-  list: () => [...tasksQueryKeys.all, "list"] as const,
+  list: (boardId: string) => [...tasksQueryKeys.all, "list", boardId] as const,
 };
