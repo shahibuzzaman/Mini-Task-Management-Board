@@ -254,6 +254,27 @@ The browser redirects to your app callback route:
 
 Supabase exchanges the Google auth code and then redirects the user into the app.
 
+## Demo Accounts
+
+The default local seed creates two confirmed email/password users and a shared board with starter tasks.
+
+- Owner:
+  - email: `owner.demo@tasktrack.local`
+  - password: `DemoPass@123`
+- Member:
+  - email: `member.demo@tasktrack.local`
+  - password: `DemoPass@123`
+
+Seeded demo data includes:
+
+- one shared board named `Launch Planning Board`
+- one `owner` membership and one `member` membership
+- starter tasks in `todo`, `in_progress`, and `done`
+- sample task comments
+- pinned board rows for both demo users
+
+Use these accounts only for local/demo environments.
+
 ## Local Setup
 
 ### 1. Install dependencies
@@ -280,6 +301,16 @@ npm run db:push
 ```
 
 If you see an auth error from the CLI, run `supabase login` first or set `SUPABASE_ACCESS_TOKEN`.
+
+To load the demo accounts and starter board data into the local Supabase stack:
+
+```bash
+npm run db:reset
+```
+
+If you are using a hosted Supabase project instead of the local CLI stack, run
+[supabase/seed.sql](/Users/mac/Desktop/mini-task-management-board/supabase/seed.sql)
+manually in the Supabase SQL Editor after the schema is applied.
 
 ### 4. Start the app
 
@@ -323,6 +354,7 @@ npm run test
 Also validate:
 
 - sign up and sign in
+- seeded owner and member credentials both work
 - board creation
 - add member flow
 - invitation email flow
@@ -344,6 +376,6 @@ For the demo, emphasize:
 ## Trade-Offs
 
 - No full organization admin layer
-- No authentication providers beyond email/password
+- Google OAuth is supported, but there is no broader SSO or enterprise identity setup
 - Delete was added for tasks because it is a small, high-value extension of the existing task lifecycle
 - The implementation prioritizes a coherent, explainable product slice over broad feature coverage
