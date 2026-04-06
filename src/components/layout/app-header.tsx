@@ -1,9 +1,48 @@
 "use client";
 
+import { useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useUIStore } from "@/store/ui-store-provider";
 
 export function AppHeader() {
   const toggleMobileSidebar = useUIStore((state) => state.toggleMobileSidebar);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  const query = searchParams.get("q") ?? "";
+  const [inputValue, setInputValue] = useState(query);
+
+  useEffect(() => {
+    setInputValue(query);
+  }, [query]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      if (inputValue === query) {
+        return;
+      }
+
+      const nextSearchParams = new URLSearchParams(searchParams.toString());
+
+      if (inputValue.trim().length > 0) {
+        nextSearchParams.set("q", inputValue.trim());
+      } else {
+        nextSearchParams.delete("q");
+      }
+
+      const nextQueryString = nextSearchParams.toString();
+      const nextUrl = nextQueryString.length > 0 ? `${pathname}?${nextQueryString}` : pathname;
+
+      startTransition(() => {
+        router.replace(nextUrl, { scroll: false });
+      });
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [inputValue, pathname, query, router, searchParams]);
 
   return (
     <header className="sticky top-0 z-10 flex min-h-[72px] w-full items-center gap-3 border-b border-[#e2e8f0] bg-white px-4 sm:px-6 lg:px-8">
@@ -28,8 +67,18 @@ export function AppHeader() {
           <input
             type="text"
             placeholder="Search tasks, projects, or team members..."
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            aria-label="Search boards or tasks"
             className="w-full rounded-[10px] border border-transparent bg-[#f4f6fc] py-2.5 pl-10 pr-4 text-[14px] font-medium text-slate-800 transition-all placeholder:text-slate-400 focus:border-[#3525cd]/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3525cd]/20"
           />
+          {isPending ? (
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-300">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+              </svg>
+            </div>
+          ) : null}
         </div>
       </div>
 

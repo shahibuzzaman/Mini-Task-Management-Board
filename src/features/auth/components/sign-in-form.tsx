@@ -74,80 +74,84 @@ export function SignInForm({
   }
 
   return (
-    <div className="w-full max-w-[420px] mx-auto">
-      <section className="w-full bg-surface-container-lowest rounded-3xl p-10 flex flex-col shadow-[var(--shadow-atmospheric)] relative z-10 border border-outline-variant/10">
-        <div className="flex items-center justify-center gap-3 mb-8 mx-auto">
-          <div className="w-10 h-10 bg-[#3525cd] rounded-[10px] flex items-center justify-center shadow-sm">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <div className="mx-auto w-full max-w-[420px]">
+      <section className="relative z-10 flex w-full flex-col rounded-[2rem] border border-slate-100 bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] sm:p-10">
+        <div className="mx-auto mb-8 flex items-center justify-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-sm ring-1 ring-primary/20">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
           </div>
-          <span className="text-[22px] font-bold tracking-tight text-on-surface">TaskTrack</span>
+          <span className="text-[24px] font-bold tracking-tight text-slate-900">TaskTrack</span>
         </div>
 
-        <div className="text-center mb-8">
-          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-on-surface mb-2" suppressHydrationWarning>
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-[26px] font-bold tracking-tight text-slate-900" suppressHydrationWarning>
             Welcome back
           </h1>
-          <p className="text-[15px] text-on-surface-variant">
+          <p className="text-[14px] text-slate-500">
             Your precision workspace is ready for you.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <GoogleAuthButton
             onClick={() => void handleGoogleSignIn()}
             disabled={isPending || isGooglePending}
             label={isGooglePending ? "Redirecting to Google..." : "Continue with Google"}
           />
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-outline-variant/30" />
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant">
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d]">
               Or continue with email
             </span>
-            <div className="h-px flex-1 bg-outline-variant/30" />
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
         </div>
 
-        <form className="space-y-5" onSubmit={loginForm.handleSubmit(handleLogin)}>
-          <div className="space-y-4">
-            <AuthField label="EMAIL ADDRESS" error={loginForm.formState.errors.email?.message}>
+        <form className="mt-6 space-y-6" onSubmit={loginForm.handleSubmit(handleLogin)}>
+          <div className="space-y-5">
+            <AuthField label="Email Address" error={loginForm.formState.errors.email?.message}>
               <input
                 type="email"
                 placeholder="name@company.com"
                 autoComplete="email"
-                className="mt-1.5 w-full rounded-xl bg-surface-container-low px-4 py-[14px] text-[15px] text-on-surface placeholder:text-on-surface-variant/50 outline-none transition border border-transparent focus:bg-surface-container-lowest focus:border-primary focus:shadow-sm placeholder:font-medium"
+                className="w-full rounded-xl border border-transparent bg-slate-50 px-4 py-3.5 text-[14px] font-medium text-slate-900 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] outline-none transition placeholder:text-slate-400 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
                 {...loginForm.register("email")}
               />
             </AuthField>
 
             <AuthField 
-              label="PASSWORD" 
+              label="Password" 
               error={loginForm.formState.errors.password?.message}
               action={
-                <Link href="/forgot-password" className="text-xs font-bold text-[#3525cd] hover:text-[#4f46e5] transition-colors">Forgot password?</Link>
+                <Link href="/forgot-password" className="text-[13px] font-bold text-primary transition hover:text-primary/80">Forgot?</Link>
               }
             >
               <PasswordInput
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="mt-1.5 w-full rounded-xl bg-surface-container-low px-4 py-[14px] text-[15px] text-on-surface placeholder:text-on-surface-variant/40 outline-none transition border border-transparent focus:bg-surface-container-lowest focus:border-primary focus:shadow-sm placeholder:tracking-[0.2em]"
+                className="w-full rounded-xl border border-transparent bg-slate-50 px-4 py-3.5 text-[14px] font-medium text-slate-900 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] outline-none transition placeholder:tracking-[0.2em] placeholder:text-slate-400 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
                 {...loginForm.register("password")}
               />
             </AuthField>
           </div>
+          
           <button
             type="submit"
             disabled={isPending || isGooglePending}
-            className="mt-4 w-full rounded-xl bg-[#3525cd] hover:bg-[#4f46e5] py-[14px] text-[15px] font-bold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2 group"
+            className="group flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? "Signing in..." : "Sign In"}
             {!isPending && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-90 group-hover:translate-x-1 transition-transform"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-90 transition-transform group-hover:translate-x-1"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             )}
           </button>
-          <div className="text-center pt-3 pb-1">
-            <span className="text-[14px] text-on-surface flex items-center justify-center gap-1">
+          
+          <div className="pt-2 text-center">
+            <span className="flex items-center justify-center gap-1.5 text-[14px] text-slate-600">
               Don&apos;t have an account? 
-              <Link href={nextPath && nextPath !== "/dashboard" ? `/signup?next=${encodeURIComponent(nextPath)}` : `/signup`} className="font-bold text-[#3525cd] hover:text-[#4f46e5] transition-colors ml-1">Sign up</Link>
+              <Link href={nextPath && nextPath !== "/dashboard" ? `/signup?next=${encodeURIComponent(nextPath)}` : `/signup`} className="font-bold text-primary transition hover:text-primary/80">
+                Sign up
+              </Link>
             </span>
           </div>
         </form>

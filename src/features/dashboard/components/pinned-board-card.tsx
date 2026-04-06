@@ -15,17 +15,17 @@ export function PinnedBoardCard({ board, index }: PinnedBoardCardProps) {
   return (
     <Link
       href={getBoardPath(board.id)}
-      className="group relative flex h-[220px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-[#3525cd]/30 hover:shadow-md sm:p-6"
+      className="group relative flex h-[220px] flex-col overflow-hidden rounded-[1.5rem] bg-surface-container-lowest p-6 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 transition-all hover:ring-[#3525cd]/50 hover:shadow-[0_8px_24px_-8px_rgba(15,23,42,0.12)]"
     >
       <div
-        className={`absolute bottom-0 left-0 top-0 w-1 ${
+        className={`absolute bottom-0 left-0 top-0 w-1.5 ${
           isPrimaryCard ? "bg-[#3525cd]" : "bg-cyan-500"
         }`}
       />
 
       <div className="mb-4 flex items-start justify-between">
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+          className={`flex h-10 w-10 items-center justify-center rounded-[10px] ${
             isPrimaryCard
               ? "bg-[#3525cd]/10 text-[#3525cd]"
               : "bg-cyan-500/10 text-cyan-600"

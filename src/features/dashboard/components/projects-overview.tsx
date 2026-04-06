@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
 import type { BoardSummary } from "@/features/boards/types/board";
 import { DashboardMetricsGrid } from "@/features/dashboard/components/dashboard-metrics-grid";
@@ -28,7 +30,21 @@ export function ProjectsOverview({
 }) {
   const boardsQuery = useBoardsQuery(boards);
   const boardList = boardsQuery.data ?? boards;
-  const pinnedBoards = boardList.filter((board) => board.isPinned);
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q")?.trim().toLowerCase() ?? "";
+  const filteredBoards = useMemo(() => {
+    if (searchQuery.length === 0) {
+      return boardList;
+    }
+
+    return boardList.filter((board) =>
+      `${board.name} ${board.description}`.toLowerCase().includes(searchQuery),
+    );
+  }, [boardList, searchQuery]);
+  const visibleBoards =
+    searchQuery.length > 0
+      ? filteredBoards
+      : boardList.filter((board) => board.isPinned);
   const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
 
   return (
@@ -40,7 +56,13 @@ export function ProjectsOverview({
         completionRate={getCompletionRate(metrics)}
       />
       <PinnedBoardsSection
-        boards={pinnedBoards}
+        boards={visibleBoards}
+        title={searchQuery.length > 0 ? "Board Results" : "Pinned Boards"}
+        emptyMessage={
+          searchQuery.length > 0
+            ? "No boards matched your search."
+            : "Pin boards from each board's settings page to show them here."
+        }
         onCreateBoard={openCreateBoardModal}
       />
     </div>

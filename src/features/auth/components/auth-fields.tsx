@@ -13,15 +13,15 @@ export function AuthField({
 }) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between px-1">
-        <label className="text-[10px] font-extrabold tracking-[0.2em] text-on-surface-variant uppercase">
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d]">
           {label}
         </label>
         {action && <div>{action}</div>}
       </div>
       {children}
       {error && (
-        <span className="mt-2 text-[12px] font-bold text-[#b3261e] pl-1">
+        <span className="mt-2 pl-1 text-[12px] font-bold text-rose-600">
           {error}
         </span>
       )}
@@ -121,11 +121,11 @@ export function GoogleAuthButton({
   label: string;
 }) {
   return (
-    <button
+      <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-xl border border-outline-variant/20 bg-white px-4 py-[14px] text-[15px] font-bold text-on-surface shadow-sm transition hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-60"
+      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-[14px] text-[14px] font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span className="flex items-center justify-center gap-3">
         <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
