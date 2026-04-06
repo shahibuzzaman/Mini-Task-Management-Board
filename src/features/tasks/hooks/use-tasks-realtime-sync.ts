@@ -46,6 +46,20 @@ export function useTasksRealtimeSync(boardId: string) {
           });
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "tasks",
+          filter: `board_id=eq.${boardId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: tasksQueryKeys.list(boardId),
+          });
+        },
+      )
       .subscribe();
 
     return () => {

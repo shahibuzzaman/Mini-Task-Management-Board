@@ -898,3 +898,17 @@ on public.task_attachments
 for delete
 to authenticated
 using (public.is_task_member(task_id) and public.is_task_active(task_id));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'tasks'
+  ) then
+    alter publication supabase_realtime add table public.tasks;
+  end if;
+end;
+$$;

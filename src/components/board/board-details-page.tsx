@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BoardTabs } from "@/components/board/board-tabs";
 import { getBoardsPath } from "@/features/boards/lib/board-routes";
 import {
+  canDeleteBoard,
   canManageBoardLifecycle,
   canManageBoardSettings,
 } from "@/features/boards/lib/board-permissions";
@@ -58,6 +59,7 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
   const deleteBoardMutation = useDeleteBoardMutation();
   const canEditSettings = canManageBoardSettings(board.currentUserRole);
   const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
+  const canRemoveBoard = canDeleteBoard(board.currentUserRole);
   const showToast = useToast();
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description);
@@ -355,29 +357,33 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
           </div>
         </SettingsSection>
 
-        {canManageLifecycle ? (
+        {canManageLifecycle || canRemoveBoard ? (
           <SettingsSection
             title="Danger Zone"
             titleClassName="text-rose-700"
             description="Irreversible actions that affect the entire project board."
           >
             <div className="rounded-2xl border border-rose-100 bg-rose-50/60">
-              <DangerRow
-                title="Archive Board"
-                description="Remove from active projects. Can be restored later."
-                actionLabel={board.archivedAt ? "Unarchive" : "Archive"}
-                actionTone="secondary"
-                disabled={updateBoardMutation.isPending}
-                onAction={() => void handleArchiveToggle()}
-              />
-              <DangerRow
-                title="Delete Board"
-                description="Permanently delete all data. This cannot be undone."
-                actionLabel={deleteBoardMutation.isPending ? "Deleting..." : "Delete Board"}
-                actionTone="danger"
-                disabled={deleteBoardMutation.isPending}
-                onAction={() => void handleDeleteBoard()}
-              />
+              {canManageLifecycle ? (
+                <DangerRow
+                  title="Archive Board"
+                  description="Remove from active projects. Can be restored later."
+                  actionLabel={board.archivedAt ? "Unarchive" : "Archive"}
+                  actionTone="secondary"
+                  disabled={updateBoardMutation.isPending}
+                  onAction={() => void handleArchiveToggle()}
+                />
+              ) : null}
+              {canRemoveBoard ? (
+                <DangerRow
+                  title="Delete Board"
+                  description="Permanently delete all data. This cannot be undone."
+                  actionLabel={deleteBoardMutation.isPending ? "Deleting..." : "Delete Board"}
+                  actionTone="danger"
+                  disabled={deleteBoardMutation.isPending}
+                  onAction={() => void handleDeleteBoard()}
+                />
+              ) : null}
             </div>
           </SettingsSection>
         ) : null}

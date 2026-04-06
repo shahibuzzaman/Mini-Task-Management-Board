@@ -110,3 +110,44 @@ export function PasswordInput({ className = "", ...props }: PasswordInputProps) 
     </div>
   );
 }
+
+export function GoogleAuthButton({
+  onClick,
+  disabled = false,
+  label,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full rounded-xl border border-outline-variant/20 bg-white px-4 py-[14px] text-[15px] font-bold text-on-surface shadow-sm transition hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <span className="flex items-center justify-center gap-3">
+        <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+          <path
+            d="M21.805 10.023h-9.63v3.955h5.518c-.238 1.275-.961 2.356-2.052 3.08v2.56h3.322c1.945-1.79 3.062-4.43 3.062-7.568 0-.687-.062-1.346-.22-2.027Z"
+            fill="#4285F4"
+          />
+          <path
+            d="M12.175 22c2.767 0 5.09-.917 6.787-2.482l-3.322-2.56c-.924.618-2.103.983-3.465.983-2.66 0-4.916-1.795-5.723-4.21H3.02v2.64A10.24 10.24 0 0 0 12.175 22Z"
+            fill="#34A853"
+          />
+          <path
+            d="M6.452 13.73a6.154 6.154 0 0 1-.32-1.955c0-.68.116-1.34.32-1.955V7.18H3.02a10.243 10.243 0 0 0 0 9.19l3.432-2.64Z"
+            fill="#FBBC05"
+          />
+          <path
+            d="M12.175 5.61c1.505 0 2.855.518 3.92 1.533l2.94-2.94C17.26 2.558 14.937 1.55 12.175 1.55A10.24 10.24 0 0 0 3.02 7.18l3.432 2.64c.807-2.414 3.063-4.21 5.723-4.21Z"
+            fill="#EA4335"
+          />
+        </svg>
+        <span>{label}</span>
+      </span>
+    </button>
+  );
+}

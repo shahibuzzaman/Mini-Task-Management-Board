@@ -6,6 +6,7 @@ import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardTransferOwnershipLoadingState } from "@/components/board/board-loading-state";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
 import {
+  canDeleteBoard,
   canManageBoardLifecycle,
   canManageBoardSettings,
 } from "@/features/boards/lib/board-permissions";
@@ -46,6 +47,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
   const showToast = useToast();
   const canEditSettings = canManageBoardSettings(board.currentUserRole);
   const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
+  const canRemoveBoard = canDeleteBoard(board.currentUserRole);
 
   if (!canEditSettings) {
     return null;
@@ -280,93 +282,99 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         </button>
       </form>
 
-      {canManageLifecycle ? (
+      {canManageLifecycle || canRemoveBoard ? (
         <>
-          <div className="mt-10 border-t border-slate-100 pt-8">
-            <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-              <div>
-                <h3 className={labelClass}>
-                  Archive
-                </h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
-                  Archived boards remain visible but become read-only for task changes.
-                </p>
+          {canManageLifecycle ? (
+            <div className="mt-10 border-t border-slate-100 pt-8">
+              <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+                <div>
+                  <h3 className={labelClass}>
+                    Archive
+                  </h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
+                    Archived boards remain visible but become read-only for task changes.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleArchiveToggle()}
+                  disabled={updateBoardMutation.isPending}
+                  className="shrink-0 rounded-xl bg-surface-container-high px-6 py-3.5 text-[14px] font-bold text-slate-700 transition hover:bg-[#d5dcf5] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {board.archivedAt ? "Unarchive board" : "Archive board"}
+                </button>
               </div>
+            </div>
+          ) : null}
+
+          {canManageLifecycle ? (
+            <div className="mt-10 border-t border-slate-100 pt-8">
+              <h3 className={labelClass}>
+                Transfer ownership
+              </h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
+                Promote another collaborator to owner. You will become an admin.
+              </p>
+
+              <div className="mt-6">
+                {membersQuery.isLoading ? (
+                  <BoardTransferOwnershipLoadingState />
+                ) : membersQuery.isError ? (
+                  <BoardErrorState message={membersQuery.error.message} />
+                ) : transferableMembers.length > 0 ? (
+                  <div className="space-y-4">
+                    <select
+                      value={targetOwnerId}
+                      onChange={(event) => setTargetOwnerId(event.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select a new owner</option>
+                      {transferableMembers.map((member) => (
+                        <option key={member.userId} value={member.userId}>
+                          {member.displayName} ({member.role})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleTransferOwnership()}
+                      disabled={
+                        transferOwnershipMutation.isPending || targetOwnerId.length === 0
+                      }
+                      className="rounded-xl bg-primary px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
+                    >
+                      {transferOwnershipMutation.isPending
+                        ? "Transferring..."
+                        : "Transfer Ownership"}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-5 py-6 text-[14px] leading-relaxed text-slate-600">
+                    Add another member before transferring ownership.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {canRemoveBoard ? (
+            <div className="mt-10 border-t border-slate-100 pt-8">
+              <h3 className="block text-[11px] font-bold uppercase tracking-[0.12em] text-rose-600 mb-2">
+                Danger zone
+              </h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
+                Deleting a board permanently removes its tasks, members, and invitations.
+              </p>
               <button
                 type="button"
-                onClick={() => void handleArchiveToggle()}
-                disabled={updateBoardMutation.isPending}
-                className="shrink-0 rounded-xl bg-surface-container-high px-6 py-3.5 text-[14px] font-bold text-slate-700 transition hover:bg-[#d5dcf5] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleDeleteBoard()}
+                disabled={deleteBoardMutation.isPending}
+                className="mt-6 rounded-xl bg-rose-600 px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-600/50"
               >
-                {board.archivedAt ? "Unarchive board" : "Archive board"}
+                {deleteBoardMutation.isPending ? "Deleting..." : "Delete Board"}
               </button>
             </div>
-          </div>
-
-          <div className="mt-10 border-t border-slate-100 pt-8">
-            <h3 className={labelClass}>
-              Transfer ownership
-            </h3>
-            <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
-              Promote another collaborator to owner. You will become an admin.
-            </p>
-
-            <div className="mt-6">
-              {membersQuery.isLoading ? (
-                <BoardTransferOwnershipLoadingState />
-              ) : membersQuery.isError ? (
-                <BoardErrorState message={membersQuery.error.message} />
-              ) : transferableMembers.length > 0 ? (
-                <div className="space-y-4">
-                  <select
-                    value={targetOwnerId}
-                    onChange={(event) => setTargetOwnerId(event.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select a new owner</option>
-                    {transferableMembers.map((member) => (
-                      <option key={member.userId} value={member.userId}>
-                        {member.displayName} ({member.role})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => void handleTransferOwnership()}
-                    disabled={
-                      transferOwnershipMutation.isPending || targetOwnerId.length === 0
-                    }
-                    className="rounded-xl bg-primary px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
-                  >
-                    {transferOwnershipMutation.isPending
-                      ? "Transferring..."
-                      : "Transfer Ownership"}
-                  </button>
-                </div>
-              ) : (
-                <p className="rounded-xl border border-dashed border-slate-200 px-5 py-6 text-[14px] leading-relaxed text-slate-600">
-                  Add another member before transferring ownership.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-10 border-t border-slate-100 pt-8">
-            <h3 className="block text-[11px] font-bold uppercase tracking-[0.12em] text-rose-600 mb-2">
-              Danger zone
-            </h3>
-            <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
-              Deleting a board permanently removes its tasks, members, and invitations.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleDeleteBoard()}
-              disabled={deleteBoardMutation.isPending}
-              className="mt-6 rounded-xl bg-rose-600 px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-600/50"
-            >
-              {deleteBoardMutation.isPending ? "Deleting..." : "Delete Board"}
-            </button>
-          </div>
+          ) : null}
         </>
       ) : null}
     </section>
