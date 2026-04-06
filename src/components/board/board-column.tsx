@@ -31,7 +31,7 @@ function BoardColumnComponent({
     <section className="flex min-h-[32rem] flex-col">
       <header className="mb-5 flex items-center justify-between px-2">
         <div className="flex items-center gap-2.5">
-          <h2 className="text-[28px] font-semibold tracking-tight text-slate-800">
+          <h2 className="text-lg font-semibold tracking-tight text-slate-800 sm:text-[19px]">
             {title}
           </h2>
           <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${getColumnCountTone(status)}`}>
@@ -100,9 +100,9 @@ function getColumnCountTone(status: TaskStatus) {
     case "todo":
       return "bg-indigo-50 text-indigo-500";
     case "in_progress":
-      return "bg-cyan-100 text-cyan-700";
+      return "bg-teal-700 text-white";
     case "done":
-      return "bg-indigo-50 text-indigo-500";
+      return "bg-indigo-100/50 text-indigo-400";
   }
 }
 

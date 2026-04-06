@@ -1,52 +1,79 @@
 "use client";
 
+import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
 import type { BoardSummary } from "@/features/boards/types/board";
 import { getBoardPath } from "@/features/boards/lib/board-routes";
 import Link from "next/link";
 import { useUIStore } from "@/store/ui-store-provider";
+import type { DashboardMetrics } from "@/features/dashboard/lib/get-dashboard-metrics";
 
-export function ProjectsOverview({ boards }: { boards: BoardSummary[] }) {
-  const pinnedBoards = boards.slice(0, 2);
+function formatMetric(value: number) {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+function getCompletionRate(metrics: DashboardMetrics | null) {
+  if (!metrics || metrics.totalTasks === 0) {
+    return "0%";
+  }
+
+  return `${Math.round((metrics.completedTasks / metrics.totalTasks) * 100)}%`;
+}
+
+export function ProjectsOverview({
+  boards,
+  metrics,
+}: {
+  boards: BoardSummary[];
+  metrics: DashboardMetrics | null;
+}) {
+  const boardsQuery = useBoardsQuery(boards);
+  const boardList = boardsQuery.data ?? boards;
+  const pinnedBoards = boardList.filter((board) => board.isPinned);
   const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
 
   return (
-    <div className="w-full px-10 py-10 max-w-[1200px] mx-auto">
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
 
 
       {/* KPI Stats Widgets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
+      <div className="mb-10 grid grid-cols-1 gap-4 sm:mb-12 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
         {/* Widget 1: Total Tasks */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between h-[130px]">
+        <div className="relative flex h-[130px] flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#3525cd]"></div>
           <span className="text-[15px] font-semibold text-slate-600 pl-2 pt-1">Total Tasks</span>
           <div className="flex items-end justify-between pl-2 pb-1">
-            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">1,284</span>
-            <span className="text-[13px] font-bold text-teal-700 flex items-center gap-1 mb-1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-              +12%
+            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">
+              {formatMetric(metrics?.totalTasks ?? 0)}
+            </span>
+            <span className="text-[13px] font-semibold text-slate-500 flex items-center gap-1 mb-1">
+              {formatMetric(boardList.length)} boards
             </span>
           </div>
         </div>
 
         {/* Widget 2: Completed */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between h-[130px]">
+        <div className="relative flex h-[130px] flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#0e5c6a]"></div>
           <span className="text-[15px] font-semibold text-slate-600 pl-2 pt-1">Completed</span>
           <div className="flex items-end justify-between pl-2 pb-1">
-            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">852</span>
+            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">
+              {formatMetric(metrics?.completedTasks ?? 0)}
+            </span>
             <span className="text-[13px] font-bold text-[#0e5c6a] flex items-center gap-1 mb-1">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              66%
+              {getCompletionRate(metrics)}
             </span>
           </div>
         </div>
 
         {/* Widget 3: In Progress */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between h-[130px]">
+        <div className="relative flex h-[130px] flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#5e697a]"></div>
           <span className="text-[15px] font-semibold text-slate-600 pl-2 pt-1">In Progress</span>
           <div className="flex items-end justify-between pl-2 pb-1">
-            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">312</span>
+            <span className="text-[36px] font-extrabold text-slate-900 leading-none tracking-tight">
+              {formatMetric(metrics?.inProgressTasks ?? 0)}
+            </span>
             <span className="text-[13px] font-semibold text-slate-500 flex items-center gap-1 mb-1">
               Active now
             </span>
@@ -54,34 +81,44 @@ export function ProjectsOverview({ boards }: { boards: BoardSummary[] }) {
         </div>
 
         {/* Widget 4: Overdue */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between h-[130px]">
+        <div className="relative flex h-[130px] flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#c82121]"></div>
           <span className="text-[15px] font-semibold text-slate-600 pl-2 pt-1">Overdue</span>
           <div className="flex items-end justify-between pl-2 pb-1">
-            <span className="text-[36px] font-extrabold text-[#c82121] leading-none tracking-tight">12</span>
+            <span className="text-[36px] font-extrabold text-[#c82121] leading-none tracking-tight">
+              {formatMetric(metrics?.overdueTasks ?? 0)}
+            </span>
             <span className="text-[13px] font-extrabold text-[#c82121] flex items-center gap-1 mb-1">
-              <span className="font-black text-[15px]">!</span> Critical
+              <span className="font-black text-[15px]">!</span>{" "}
+              {(metrics?.overdueTasks ?? 0) > 0 ? "Needs attention" : "All clear"}
             </span>
           </div>
         </div>
       </div>
 
       {/* Pinned Boards */}
-      <div className="mb-14">
+      <div className="mb-10 sm:mb-14">
         <div className="flex items-center gap-2 mb-6">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <h2 className="text-[18px] font-bold text-slate-900">Pinned Boards</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {pinnedBoards.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-[14px] leading-6 text-slate-600">
+            Pin boards from each board&apos;s settings page to show them here.
+          </div>
+        ) : null}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
           {pinnedBoards.map((board, index) => (
-            <Link key={board.id} href={getBoardPath(board.id)} className="group relative bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-hidden hover:shadow-md hover:border-[#3525cd]/30 transition-all flex flex-col h-[220px]">
+            <Link key={board.id} href={getBoardPath(board.id)} className="group relative flex h-[220px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-[#3525cd]/30 hover:shadow-md sm:p-6">
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${index === 0 ? "bg-[#3525cd]" : "bg-cyan-500"}`}></div>
               
               <div className="flex justify-between items-start mb-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${index === 0 ? "bg-[#3525cd]/10 text-[#3525cd]" : "bg-cyan-500/10 text-cyan-600"}`}>
                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 3.82-13 1.5 1.5 0 0 0-2.18-2.18 22 22 0 0 1 13-3.82l3 3"/><path d="m9 11 4 4"/></svg>
                 </div>
-                <button className="text-slate-400 hover:text-slate-600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                  Pinned
+                </span>
               </div>
 
               <h3 className="text-[17px] font-bold text-slate-900 truncate tracking-tight">{board.name}</h3>
@@ -113,7 +150,7 @@ export function ProjectsOverview({ boards }: { boards: BoardSummary[] }) {
             </Link>
           ))}
 
-          <button onClick={openCreateBoardModal} className="group relative bg-[#f8faff] rounded-xl border-2 border-dashed border-[#e2e8f0] p-6 flex flex-col items-center justify-center hover:bg-[#f1f5f9] hover:border-[#cbd5e1] transition-all h-[220px]">
+          <button onClick={openCreateBoardModal} className="group relative flex h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e2e8f0] bg-[#f8faff] p-5 transition-all hover:border-[#cbd5e1] hover:bg-[#f1f5f9] sm:p-6">
              <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-800 mb-4 group-hover:scale-110 transition-transform border border-slate-100">
                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
              </div>
@@ -123,7 +160,7 @@ export function ProjectsOverview({ boards }: { boards: BoardSummary[] }) {
       </div>
 
 
-      <button onClick={openCreateBoardModal} className="fixed bottom-10 right-10 w-14 h-14 bg-[#3525cd] text-white rounded-[14px] shadow-lg flex items-center justify-center hover:bg-[#4f46e5] hover:-translate-y-1 transition-all z-50">
+      <button onClick={openCreateBoardModal} className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#3525cd] text-white shadow-lg transition-all hover:-translate-y-1 hover:bg-[#4f46e5] sm:bottom-8 sm:right-8 sm:h-14 sm:w-14">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </button>
     </div>

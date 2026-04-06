@@ -186,7 +186,7 @@ export function TaskBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <section className="rounded-[2rem] bg-[#f8f8ff] px-2 py-3 sm:px-3">
+      <section className="w-full">
         {board.archivedAt ? (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             This board is archived. Tasks remain visible, but create, edit, and

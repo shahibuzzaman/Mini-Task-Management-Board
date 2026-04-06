@@ -15,6 +15,7 @@ type InvitationPreviewRow = {
   id: string;
   email: string;
   role: "admin" | "member" | "owner";
+  invited_user_id: string | null;
   token: string;
   token_expires_at: string;
   accepted_at: string | null;
@@ -57,7 +58,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const { data: invitation, error } = await adminClient
     .from("board_invitations")
     .select(
-      "id, email, role, token, token_expires_at, accepted_at, revoked_at, board:boards(id, name, description)",
+      "id, email, role, invited_user_id, token, token_expires_at, accepted_at, revoked_at, board:boards(id, name, description)",
     )
     .eq("token", token)
     .maybeSingle<InvitationPreviewRow>();
@@ -108,6 +109,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
         status={status}
         isAuthenticated={Boolean(user)}
         signedInEmail={user?.email ?? null}
+        hasExistingAccount={invitation.invited_user_id !== null}
       />
     </main>
   );

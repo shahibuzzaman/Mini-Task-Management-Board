@@ -105,6 +105,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      board_pins: {
+        Row: {
+          board_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          board_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          board_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           id: string;

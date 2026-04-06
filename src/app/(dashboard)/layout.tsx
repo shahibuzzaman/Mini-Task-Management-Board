@@ -45,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <div className="flex min-h-screen bg-[#fafbfe] w-full text-slate-900 font-sans">
       <AppSidebar viewer={viewer} />
-      <div className="flex flex-col flex-1 pl-[260px]">
+      <div className="flex flex-col flex-1 lg:pl-[260px]">
         <AppHeader />
         <main className="flex-1 w-full bg-[#f8f9fd]">
           {children}

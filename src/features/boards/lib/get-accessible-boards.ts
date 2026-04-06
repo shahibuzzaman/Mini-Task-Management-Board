@@ -7,6 +7,10 @@ type MembershipRow = {
   role: BoardSummary["currentUserRole"];
 };
 
+type PinRow = {
+  board_id: string;
+};
+
 type BoardRow = {
   id: string;
   name: string;
@@ -18,11 +22,19 @@ type BoardRow = {
   created_at: string;
 };
 
+function isMissingBoardPinsTableError(message: string) {
+  return message.includes("public.board_pins");
+}
+
 export async function getAccessibleBoards(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<BoardSummary[]> {
-  const [{ data: memberships, error: membershipsError }, { data: boards, error: boardsError }] =
+  const [
+    { data: memberships, error: membershipsError },
+    { data: boards, error: boardsError },
+    { data: pins, error: pinsError },
+  ] =
     await Promise.all([
       supabase
         .from("board_members")
@@ -36,6 +48,11 @@ export async function getAccessibleBoards(
         )
         .order("created_at", { ascending: true })
         .returns<BoardRow[]>(),
+      supabase
+        .from("board_pins")
+        .select("board_id")
+        .eq("user_id", userId)
+        .returns<PinRow[]>(),
     ]);
 
   if (membershipsError) {
@@ -46,17 +63,35 @@ export async function getAccessibleBoards(
     throw new Error(boardsError.message);
   }
 
+  if (pinsError && !isMissingBoardPinsTableError(pinsError.message)) {
+    throw new Error(pinsError.message);
+  }
+
   const roleByBoardId = new Map(
-    memberships.map((membership) => [membership.board_id, membership.role]),
+    (memberships ?? []).map((membership) => [membership.board_id, membership.role]),
+  );
+  const pinnedBoardIds = new Set(
+    pinsError ? [] : (pins ?? []).map((pin) => pin.board_id),
   );
 
-  return boards
+  return (boards ?? [])
     .filter((board) => roleByBoardId.has(board.id))
+    .sort((left, right) => {
+      const leftPinned = pinnedBoardIds.has(left.id);
+      const rightPinned = pinnedBoardIds.has(right.id);
+
+      if (leftPinned !== rightPinned) {
+        return leftPinned ? -1 : 1;
+      }
+
+      return left.created_at.localeCompare(right.created_at);
+    })
     .map((board) => ({
       id: board.id,
       name: board.name,
       description: board.description,
       archivedAt: board.archived_at,
+      isPinned: pinnedBoardIds.has(board.id),
       accentColor: board.accent_color,
       invitePolicy: board.invite_policy,
       defaultInviteRole: board.default_invitee_role,

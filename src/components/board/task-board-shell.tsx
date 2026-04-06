@@ -10,6 +10,7 @@ import { useCreateTaskMutation } from "@/features/tasks/hooks/use-create-task-mu
 import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
 import { useTasksRealtimeSync } from "@/features/tasks/hooks/use-tasks-realtime-sync";
 import { useUpdateTaskMutation } from "@/features/tasks/hooks/use-update-task-mutation";
+import { uploadTaskAttachment } from "@/features/tasks/api/upload-task-attachment";
 import { getNextTaskPosition } from "@/features/tasks/lib/get-next-task-position";
 import type { TaskMutationInput } from "@/features/tasks/types/task-form";
 import { useToast } from "@/store/use-toast";
@@ -44,7 +45,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const errorMessage =
     createTaskMutation.error?.message ?? updateTaskMutation.error?.message;
 
-  async function handleSubmit(values: TaskMutationInput) {
+  async function handleSubmit(values: TaskMutationInput, pendingFiles: File[]) {
     createTaskMutation.reset();
     updateTaskMutation.reset();
 
@@ -69,14 +70,26 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
           assigneeId: values.assigneeId,
           position,
         });
+        if (pendingFiles.length > 0) {
+          await Promise.all(
+            pendingFiles.map((file) =>
+              uploadTaskAttachment(board.id, editingTask.id, file),
+            ),
+          );
+        }
         closeTaskForm();
-        showToast("success", "Task changes saved.");
+        showToast(
+          "success",
+          pendingFiles.length > 0
+            ? "Task changes saved and attachments uploaded."
+            : "Task changes saved.",
+        );
         return;
       }
 
       const position = getNextTaskPosition(tasksQuery.data ?? [], values.status);
 
-      await createTaskMutation.mutateAsync({
+      const createdTask = await createTaskMutation.mutateAsync({
         title: values.title,
         description: values.description,
         status: values.status,
@@ -86,8 +99,20 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         assigneeId: values.assigneeId,
         position,
       });
+      if (pendingFiles.length > 0) {
+        await Promise.all(
+          pendingFiles.map((file) =>
+            uploadTaskAttachment(board.id, createdTask.id, file),
+          ),
+        );
+      }
       closeTaskForm();
-      showToast("success", "Task created successfully.");
+      showToast(
+        "success",
+        pendingFiles.length > 0
+          ? "Task created and attachments uploaded."
+          : "Task created successfully.",
+      );
     } catch (error) {
       showToast(
         "error",

@@ -10,6 +10,7 @@ export type BoardSummary = {
   name: string;
   description: string;
   archivedAt: string | null;
+  isPinned: boolean;
   accentColor: BoardAccentColor;
   invitePolicy: BoardInvitePolicy;
   defaultInviteRole: BoardInviteRole;

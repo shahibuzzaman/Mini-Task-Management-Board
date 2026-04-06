@@ -80,7 +80,7 @@ export function BoardWorkspacePage({
   const sectionDescription = getSectionDescription(section);
 
   return (
-    <div className="w-full max-w-7xl flex-col px-6 py-6 sm:px-8 lg:px-10">
+    <div className="w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-10">
       <div className="flex flex-col gap-8">
         <header className="max-w-3xl">
           <p
@@ -90,7 +90,7 @@ export function BoardWorkspacePage({
           >
             Authenticated Workspace
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
             {board ? `${board.name} · ${sectionHeading}` : "Your Boards"}
           </h1>
           {board?.archivedAt ? (
@@ -104,7 +104,7 @@ export function BoardWorkspacePage({
               {board?.accentColor} workspace
             </p>
           ) : null}
-          <p className="mt-4 text-base leading-7 text-slate-600">
+          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
             {board?.description?.length ? `${board.description} ` : ""}
             {board ? sectionDescription : "Boards are the collaboration container in this app. Create one from the sidebar, then invite members and start creating tasks."}
           </p>

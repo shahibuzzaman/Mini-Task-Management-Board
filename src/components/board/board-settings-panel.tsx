@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { BoardTransferOwnershipLoadingState } from "@/components/board/board-loading-state";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
 import {
   canManageBoardLifecycle,
@@ -147,23 +147,26 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
     }
   }
 
+  const labelClass = "block text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d] mb-2";
+  const inputClass = "block w-full rounded-xl border border-transparent bg-surface-container-low px-4 py-3.5 text-[14px] text-slate-800 outline-none transition focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary";
+
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[1.5rem] bg-surface-container-lowest p-8 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
       <header>
-        <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <h2 className={labelClass}>
           Board Settings
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
           {board.currentUserRole === "owner"
             ? "Owners can tune collaboration policy, lifecycle controls, and ownership."
             : "Admins can update collaboration settings while owners retain destructive controls."}
         </p>
       </header>
-      <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
         <div>
           <label
             htmlFor={`board-settings-name-${board.id}`}
-            className="block text-sm font-medium text-slate-700"
+            className={labelClass}
           >
             Board name
           </label>
@@ -172,7 +175,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            className={inputClass}
             disabled={updateBoardMutation.isPending}
           />
         </div>
@@ -180,7 +183,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         <div>
           <label
             htmlFor={`board-settings-description-${board.id}`}
-            className="block text-sm font-medium text-slate-700"
+            className={labelClass}
           >
             Description
           </label>
@@ -189,7 +192,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            className={inputClass}
             disabled={updateBoardMutation.isPending}
           />
         </div>
@@ -197,7 +200,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         <div>
           <label
             htmlFor={`board-settings-accent-${board.id}`}
-            className="block text-sm font-medium text-slate-700"
+            className={labelClass}
           >
             Accent color
           </label>
@@ -207,7 +210,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
             onChange={(event) =>
               setAccentColor(event.target.value as BoardAccentColor)
             }
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            className={inputClass}
             disabled={updateBoardMutation.isPending}
           >
             <option value="sky">Sky</option>
@@ -218,11 +221,11 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           </select>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <label
               htmlFor={`board-settings-invite-policy-${board.id}`}
-              className="block text-sm font-medium text-slate-700"
+              className={labelClass}
             >
               Invite policy
             </label>
@@ -232,7 +235,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
               onChange={(event) =>
                 setInvitePolicy(event.target.value as BoardInvitePolicy)
               }
-              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              className={inputClass}
               disabled={updateBoardMutation.isPending}
             >
               <option value="admins_only">Owners and admins only</option>
@@ -243,7 +246,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           <div>
             <label
               htmlFor={`board-settings-default-invite-role-${board.id}`}
-              className="block text-sm font-medium text-slate-700"
+              className={labelClass}
             >
               Default invite role
             </label>
@@ -253,7 +256,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
               onChange={(event) =>
                 setDefaultInviteRole(event.target.value as BoardInviteRole)
               }
-              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              className={inputClass}
               disabled={updateBoardMutation.isPending}
             >
               <option value="member">Member</option>
@@ -262,7 +265,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
           </div>
         </div>
 
-        <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">
+        <p className="rounded-xl border border-transparent bg-surface-container-low px-5 py-4 text-[13px] leading-relaxed text-slate-600">
           Members can always collaborate on tasks. Invite policy decides whether
           members can send new invitations, and member-created invites use the
           default invite role.
@@ -271,21 +274,21 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         <button
           type="submit"
           disabled={updateBoardMutation.isPending || name.trim().length < 2}
-          className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+          className="rounded-xl bg-primary px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
         >
-          {updateBoardMutation.isPending ? "Saving..." : "Save board settings"}
+          {updateBoardMutation.isPending ? "Saving..." : "Save Board Settings"}
         </button>
       </form>
 
       {canManageLifecycle ? (
         <>
-          <div className="mt-6 border-t border-slate-200 pt-6">
-            <div className="flex items-center justify-between gap-4">
+          <div className="mt-10 border-t border-slate-100 pt-8">
+            <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+                <h3 className={labelClass}>
                   Archive
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
                   Archived boards remain visible but become read-only for task changes.
                 </p>
               </div>
@@ -293,32 +296,32 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
                 type="button"
                 onClick={() => void handleArchiveToggle()}
                 disabled={updateBoardMutation.isPending}
-                className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                className="shrink-0 rounded-xl bg-surface-container-high px-6 py-3.5 text-[14px] font-bold text-slate-700 transition hover:bg-[#d5dcf5] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {board.archivedAt ? "Unarchive board" : "Archive board"}
               </button>
             </div>
           </div>
 
-          <div className="mt-6 border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+          <div className="mt-10 border-t border-slate-100 pt-8">
+            <h3 className={labelClass}>
               Transfer ownership
             </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
               Promote another collaborator to owner. You will become an admin.
             </p>
 
-            <div className="mt-4">
+            <div className="mt-6">
               {membersQuery.isLoading ? (
-                <BoardLoadingState />
+                <BoardTransferOwnershipLoadingState />
               ) : membersQuery.isError ? (
                 <BoardErrorState message={membersQuery.error.message} />
               ) : transferableMembers.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <select
                     value={targetOwnerId}
                     onChange={(event) => setTargetOwnerId(event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                    className={inputClass}
                   >
                     <option value="">Select a new owner</option>
                     {transferableMembers.map((member) => (
@@ -333,35 +336,35 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
                     disabled={
                       transferOwnershipMutation.isPending || targetOwnerId.length === 0
                     }
-                    className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                    className="rounded-xl bg-primary px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
                   >
                     {transferOwnershipMutation.isPending
                       ? "Transferring..."
-                      : "Transfer ownership"}
+                      : "Transfer Ownership"}
                   </button>
                 </div>
               ) : (
-                <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
+                <p className="rounded-xl border border-dashed border-slate-200 px-5 py-6 text-[14px] leading-relaxed text-slate-600">
                   Add another member before transferring ownership.
                 </p>
               )}
             </div>
           </div>
 
-          <div className="mt-6 border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-rose-700">
+          <div className="mt-10 border-t border-slate-100 pt-8">
+            <h3 className="block text-[11px] font-bold uppercase tracking-[0.12em] text-rose-600 mb-2">
               Danger zone
             </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
               Deleting a board permanently removes its tasks, members, and invitations.
             </p>
             <button
               type="button"
               onClick={() => void handleDeleteBoard()}
               disabled={deleteBoardMutation.isPending}
-              className="mt-4 rounded-full border border-rose-200 px-4 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+              className="mt-6 rounded-xl bg-rose-600 px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-600/50"
             >
-              {deleteBoardMutation.isPending ? "Deleting..." : "Delete board"}
+              {deleteBoardMutation.isPending ? "Deleting..." : "Delete Board"}
             </button>
           </div>
         </>

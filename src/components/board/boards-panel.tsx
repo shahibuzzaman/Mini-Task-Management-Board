@@ -51,16 +51,19 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
                     </p>
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
                       {board.currentUserRole}
+                      {board.isPinned ? " · pinned" : ""}
                       {board.archivedAt ? " · archived" : ""}
                     </p>
                   </div>
-                  {isActive ? (
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${theme.badgeClassName}`}
-                    >
-                      Active
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {isActive ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${theme.badgeClassName}`}
+                      >
+                        Active
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </Link>
             );

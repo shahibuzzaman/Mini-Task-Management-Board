@@ -24,8 +24,8 @@ const TAB_ITEMS = [
 
 export function BoardTabs({ boardId, activeTab }: BoardTabsProps) {
   return (
-    <nav className="border-b border-slate-200">
-      <ul className="flex flex-wrap gap-8">
+    <nav className="overflow-x-auto border-b border-slate-200">
+      <ul className="flex min-w-max gap-5 sm:gap-8">
         {TAB_ITEMS.map((item) => {
           const isActive = item.key === activeTab;
 
@@ -33,10 +33,10 @@ export function BoardTabs({ boardId, activeTab }: BoardTabsProps) {
             <li key={item.key}>
               <Link
                 href={item.href(boardId)}
-                className={`inline-flex border-b-2 px-1 py-3 text-sm font-semibold transition-colors ${
+                className={`inline-flex whitespace-nowrap border-b-[3px] px-2 py-4 text-[15px] font-bold transition-colors ${
                   isActive
-                    ? "border-[#4f46e5] text-[#4f46e5]"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
                 }`}
               >
                 {item.label}

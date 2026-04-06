@@ -144,14 +144,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: existingMembership } = await supabase
+    const { data: existingMembership } = await adminClient
       .from("profiles")
       .select("id")
       .eq("email", parsed.data.email.toLowerCase())
       .maybeSingle();
 
     if (existingMembership) {
-      const { data: currentBoardMembership } = await supabase
+      const { data: currentBoardMembership } = await adminClient
         .from("board_members")
         .select("user_id")
         .eq("board_id", board.id)
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: existingInvitation } = await supabase
+    const { data: existingInvitation } = await adminClient
       .from("board_invitations")
       .select("id")
       .eq("board_id", board.id)
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: insertedInvitation, error: insertError } = await supabase
+    const { data: insertedInvitation, error: insertError } = await adminClient
       .from("board_invitations")
       .insert({
         board_id: board.id,

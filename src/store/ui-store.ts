@@ -15,12 +15,16 @@ export type UIState = {
   editingTaskId: string | null;
   createTaskStatus: TaskStatus;
   isCreateBoardModalOpen: boolean;
+  isMobileSidebarOpen: boolean;
   toasts: Toast[];
   openCreateTaskForm: (status?: TaskStatus) => void;
   openEditTaskForm: (taskId: string) => void;
   closeTaskForm: () => void;
   openCreateBoardModal: () => void;
   closeCreateBoardModal: () => void;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
+  toggleMobileSidebar: () => void;
   showToast: (toast: {
     kind: ToastKind;
     message: string;
@@ -39,6 +43,7 @@ export function createUIStore() {
     editingTaskId: null,
     createTaskStatus: "todo",
     isCreateBoardModalOpen: false,
+    isMobileSidebarOpen: false,
     toasts: [],
     openCreateTaskForm: (status = "todo") => {
       set({ isTaskFormOpen: true, editingTaskId: null, createTaskStatus: status });
@@ -54,6 +59,15 @@ export function createUIStore() {
     },
     closeCreateBoardModal: () => {
       set({ isCreateBoardModalOpen: false });
+    },
+    openMobileSidebar: () => {
+      set({ isMobileSidebarOpen: true });
+    },
+    closeMobileSidebar: () => {
+      set({ isMobileSidebarOpen: false });
+    },
+    toggleMobileSidebar: () => {
+      set((state) => ({ isMobileSidebarOpen: !state.isMobileSidebarOpen }));
     },
     showToast: ({ kind, message, durationMs = 4000 }) => {
       const id = `toast-${nextToastId++}`;

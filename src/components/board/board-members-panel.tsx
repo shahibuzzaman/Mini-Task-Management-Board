@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { AddBoardMemberForm } from "@/components/board/add-board-member-form";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { BoardListLoadingState } from "@/components/board/board-loading-state";
 import { BoardMemberRow } from "@/components/board/board-member-row";
 import { useAddBoardMemberMutation } from "@/features/boards/hooks/use-add-board-member-mutation";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
@@ -104,7 +104,7 @@ export function BoardMembersPanel({
 
       <div className="mt-5">
         {membersQuery.isLoading ? (
-          <BoardLoadingState />
+          <BoardListLoadingState />
         ) : membersQuery.isError ? (
           <BoardErrorState message={membersQuery.error.message} />
         ) : (

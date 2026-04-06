@@ -6,6 +6,7 @@ import { SignUpForm } from "@/features/auth/components/sign-up-form";
 type SignUpPageProps = {
   searchParams: Promise<{
     next?: string;
+    email?: string;
   }>;
 };
 
@@ -23,11 +24,11 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     }
   }
 
-  const { next } = await searchParams;
+  const { next, email } = await searchParams;
 
   return (
     <div className="w-full flex-1 flex flex-col justify-center">
-      <SignUpForm nextPath={next} />
+      <SignUpForm nextPath={next} initialEmail={email} />
     </div>
   );
 }

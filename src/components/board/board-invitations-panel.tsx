@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardInvitationRow } from "@/components/board/board-invitation-row";
-import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { BoardListLoadingState } from "@/components/board/board-loading-state";
 import { InviteBoardMemberForm } from "@/components/board/invite-board-member-form";
 import { useBoardInvitationsQuery } from "@/features/boards/hooks/use-board-invitations-query";
 import { useCreateBoardInvitationMutation } from "@/features/boards/hooks/use-create-board-invitation-mutation";
@@ -137,7 +137,7 @@ export function BoardInvitationsPanel({
 
       <div className="mt-5">
         {invitationsQuery.isLoading ? (
-          <BoardLoadingState />
+          <BoardListLoadingState />
         ) : invitationsQuery.isError ? (
           <BoardErrorState message={invitationsQuery.error.message} />
         ) : invitations.length > 0 ? (

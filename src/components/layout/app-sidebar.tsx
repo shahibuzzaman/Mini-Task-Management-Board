@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CreateBoardModal } from "@/components/board/create-board-modal";
@@ -18,6 +19,8 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
   const boardsQuery = useBoardsQuery([]);
   const boards = boardsQuery.data ?? [];
   const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
+  const isMobileSidebarOpen = useUIStore((state) => state.isMobileSidebarOpen);
+  const closeMobileSidebar = useUIStore((state) => state.closeMobileSidebar);
 
   async function handleSignOut() {
     const supabase = getSupabaseBrowserClient();
@@ -27,6 +30,7 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
     }
 
     await supabase.auth.signOut();
+    closeMobileSidebar();
     router.replace("/signin");
     router.refresh();
   }
@@ -35,6 +39,10 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
     { name: "Dashboard", href: "/dashboard", icon: DashboardIcon },
     { name: "Boards", icon: ProjectsIcon },
   ];
+
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [closeMobileSidebar, pathname]);
 
   function isItemActive(name: string) {
     if (name === "Dashboard") {
@@ -45,8 +53,19 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
   }
 
   return (
-    <aside className="w-[260px] h-screen bg-[#fafbfe] border-r border-[#e2e8f0] flex flex-col flex-shrink-0 fixed left-0 top-0">
-      <div className="p-6">
+    <>
+      <div
+        className={`fixed inset-0 z-30 bg-slate-950/30 transition-opacity lg:hidden ${
+          isMobileSidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={closeMobileSidebar}
+      />
+      <aside
+        className={`fixed left-0 top-0 z-40 flex h-screen w-[260px] flex-shrink-0 flex-col border-r border-[#e2e8f0] bg-[#fafbfe] transition-transform duration-200 lg:translate-x-0 ${
+          isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+      <div className="flex items-center justify-between p-6 lg:block">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-[#3525cd] rounded-[8px] flex items-center justify-center text-white shadow-sm">
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -56,12 +75,26 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
             <p className="text-[9px] font-bold tracking-[0.15em] text-slate-500 uppercase mt-0.5">The Precise Architect</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={closeMobileSidebar}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+          aria-label="Close navigation menu"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
       </div>
 
       <div className="px-5 mb-6 mt-2">
         <button
           type="button"
-          onClick={openCreateBoardModal}
+          onClick={() => {
+            openCreateBoardModal();
+            closeMobileSidebar();
+          }}
           className="w-full bg-[#3525cd] hover:bg-[#4f46e5] transition-colors text-white rounded-xl py-3 text-[14px] font-bold shadow-sm flex items-center justify-center gap-2"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -78,6 +111,7 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
               {item.href ? (
                 <Link
                   href={item.href}
+                  onClick={closeMobileSidebar}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
                     isActive
                       ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
@@ -111,6 +145,7 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
                           <li key={board.id}>
                             <Link
                               href={getBoardPath(board.id)}
+                              onClick={closeMobileSidebar}
                               className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
                                 isBoardActive
                                   ? "bg-white text-slate-950 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200"
@@ -163,6 +198,7 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
       </div>
       <CreateBoardModal />
     </aside>
+    </>
   );
 }
 
