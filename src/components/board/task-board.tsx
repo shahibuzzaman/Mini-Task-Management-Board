@@ -16,9 +16,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
 import { BoardColumn } from "@/components/board/board-column";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
-import { TaskBoardActions } from "@/components/board/task-board-actions";
 import { TaskCard } from "@/components/board/task-card";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
@@ -29,11 +27,7 @@ import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
 import { projectDraggedTasks } from "@/features/tasks/lib/project-dragged-tasks";
 import type { Task } from "@/features/tasks/types/task";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type TaskBoardProps = {
   board: BoardSummary;
@@ -54,7 +48,7 @@ export function TaskBoard({
   const isReadOnly = board.archivedAt !== null;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -166,20 +160,15 @@ export function TaskBoard({
     }
 
     moveTaskMutation.reset();
-    setFeedback(null);
 
     try {
       await moveTaskMutation.mutateAsync(movePayload);
-      setFeedback({
-        kind: "success",
-        message: "Task position updated.",
-      });
+      showToast("success", "Task position updated.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to move the task.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to move the task.",
+      );
     }
   }
 
@@ -197,49 +186,14 @@ export function TaskBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur sm:p-6">
-        <div className="mb-6 flex flex-col gap-2 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-950">{board.name}</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Drag tasks within or across columns. Membership and actor identity
-              are enforced server-side through authenticated route handlers and
-              database policies.
-            </p>
-            {board.archivedAt ? (
-              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                This board is archived. Tasks are visible, but create, edit, and
-                drag actions are disabled until an owner unarchives it.
-              </p>
-            ) : null}
+      <section className="w-full">
+        {board.archivedAt ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            This board is archived. Tasks remain visible, but create, edit, and
+            drag actions are disabled until an owner unarchives it.
           </div>
-          <div className="flex flex-col items-start gap-3 sm:items-end">
-            <p className="text-sm text-slate-500">
-              Signed in as{" "}
-              <span className="font-semibold text-slate-900">
-                {viewer.displayName}
-              </span>
-            </p>
-            <TaskBoardActions
-              disabled={isReadOnly}
-              disabledReason={
-                isReadOnly
-                  ? "Archived boards are read-only."
-                  : "Configure Supabase first"
-              }
-            />
-          </div>
-        </div>
-
-        {feedback ? (
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
         ) : null}
-
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-6 xl:grid-cols-3">
           {TASK_COLUMNS.map((column) => (
             <BoardColumn
               key={column.status}

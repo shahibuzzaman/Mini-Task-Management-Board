@@ -1,6 +1,17 @@
 import type { Metadata } from "next";
+import { Inter, Manrope } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Mini Task Management Board",
@@ -13,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-slate-50 text-slate-950">
+    <html lang="en" className={`h-full antialiased ${inter.variable} ${manrope.variable}`} suppressHydrationWarning>
+      <body className="min-h-full bg-surface text-on-surface font-sans" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -38,7 +38,7 @@ function SortableTaskCardComponent({
       <TaskCard
         task={task}
         isReadOnly={disabled}
-        dragHandleProps={{
+        cardDragProps={{
           ...attributes,
           ...listeners,
         }}

@@ -8,18 +8,79 @@ import { BoardInvitationsPanel } from "@/components/board/board-invitations-pane
 import { BoardMembersPanel } from "@/components/board/board-members-panel";
 import { BoardsPanel } from "@/components/board/boards-panel";
 import { TaskBoardShell } from "@/components/board/task-board-shell";
+import type { BoardSection } from "@/features/boards/lib/board-routes";
 
-type BoardPageShellProps = {
+type BoardWorkspacePageProps = {
   viewer: AuthViewer;
   boards: BoardSummary[];
   board: BoardSummary | null;
+  section: BoardSection;
 };
 
-export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
+function getSectionHeading(section: BoardSection) {
+  switch (section) {
+    case "members":
+      return "Members";
+    case "invitations":
+      return "Invitations";
+    case "settings":
+      return "Settings";
+    case "board":
+    default:
+      return "Board";
+  }
+}
+
+function getSectionDescription(section: BoardSection) {
+  switch (section) {
+    case "members":
+      return "Manage collaborators, roles, and board access for the current workspace.";
+    case "invitations":
+      return "Send invitation links, track pending access, and review invite activity.";
+    case "settings":
+      return "Tune collaboration settings, invite policy, archive state, and ownership controls.";
+    case "board":
+    default:
+      return "Work inside the Kanban board with realtime task updates, drag-and-drop ordering, and scoped board collaboration.";
+  }
+}
+
+function renderBoardSection(
+  section: BoardSection,
+  board: BoardSummary,
+  viewer: AuthViewer,
+) {
+  switch (section) {
+    case "members":
+      return <BoardMembersPanel board={board} viewer={viewer} />;
+    case "invitations":
+      return (
+        <BoardInvitationsPanel board={board} viewerEmail={viewer.email} />
+      );
+    case "settings":
+      return (
+        <div className="space-y-6">
+          <BoardSettingsPanel board={board} />
+          <BoardAdminToolsPanel board={board} />
+        </div>
+      );
+    default:
+      return <TaskBoardShell board={board} viewer={viewer} />;
+  }
+}
+
+export function BoardWorkspacePage({
+  viewer,
+  boards,
+  board,
+  section,
+}: BoardWorkspacePageProps) {
   const boardTheme = board ? getBoardTheme(board.accentColor) : null;
+  const sectionHeading = getSectionHeading(section);
+  const sectionDescription = getSectionDescription(section);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 sm:px-8 lg:px-10">
+    <div className="w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-10">
       <div className="flex flex-col gap-8">
         <header className="max-w-3xl">
           <p
@@ -29,8 +90,8 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
           >
             Authenticated Workspace
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
-            {board ? board.name : "Your Boards"}
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+            {board ? `${board.name} · ${sectionHeading}` : "Your Boards"}
           </h1>
           {board?.archivedAt ? (
             <p className="mt-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">
@@ -43,17 +104,15 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
               {board?.accentColor} workspace
             </p>
           ) : null}
-          <p className="mt-4 text-base leading-7 text-slate-600">
+          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
             {board?.description?.length ? `${board.description} ` : ""}
-            Supabase Auth owns the verified user session. TanStack Query owns
-            board and task data. Zustand owns only board UI state such as modal
-            visibility and the active editing task.
+            {board ? sectionDescription : "Boards are the collaboration container in this app. Create one from the sidebar, then invite members and start creating tasks."}
           </p>
         </header>
 
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
           {board ? (
-            <TaskBoardShell board={board} viewer={viewer} />
+            renderBoardSection(section, board, viewer)
           ) : (
             <section className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-8 shadow-sm">
               <h2 className="text-2xl font-semibold text-slate-950">
@@ -69,15 +128,9 @@ export function BoardPageShell({ viewer, boards, board }: BoardPageShellProps) {
           <aside className="space-y-6">
             <AccountSummary viewer={viewer} />
             <BoardsPanel boards={boards} activeBoardId={board?.id ?? null} />
-            {board ? <BoardSettingsPanel key={board.id} board={board} /> : null}
-            {board ? <BoardAdminToolsPanel board={board} /> : null}
-            {board ? (
-              <BoardInvitationsPanel board={board} viewerEmail={viewer.email} />
-            ) : null}
-            {board ? <BoardMembersPanel board={board} viewer={viewer} /> : null}
           </aside>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

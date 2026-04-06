@@ -1,24 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TaskFormModal } from "@/components/board/task-form-modal";
 import { TaskBoard } from "@/components/board/task-board";
 import { useCreateTaskMutation } from "@/features/tasks/hooks/use-create-task-mutation";
 import { useTasksQuery } from "@/features/tasks/hooks/use-tasks-query";
 import { useTasksRealtimeSync } from "@/features/tasks/hooks/use-tasks-realtime-sync";
 import { useUpdateTaskMutation } from "@/features/tasks/hooks/use-update-task-mutation";
+import { uploadTaskAttachment } from "@/features/tasks/api/upload-task-attachment";
 import { getNextTaskPosition } from "@/features/tasks/lib/get-next-task-position";
 import type { TaskMutationInput } from "@/features/tasks/types/task-form";
+import { useToast } from "@/store/use-toast";
 import { useUIStore } from "@/store/ui-store-provider";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 type TaskBoardShellProps = {
   board: BoardSummary;
@@ -28,12 +24,13 @@ type TaskBoardShellProps = {
 export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const isTaskFormOpen = useUIStore((state) => state.isTaskFormOpen);
   const editingTaskId = useUIStore((state) => state.editingTaskId);
+  const createTaskStatus = useUIStore((state) => state.createTaskStatus);
   const closeTaskForm = useUIStore((state) => state.closeTaskForm);
   const tasksQuery = useTasksQuery(board.id);
   const membersQuery = useBoardMembersQuery(board.id);
   const createTaskMutation = useCreateTaskMutation(board.id, viewer);
   const updateTaskMutation = useUpdateTaskMutation(board.id, viewer);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
 
   useTasksRealtimeSync(board.id);
 
@@ -48,8 +45,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
   const errorMessage =
     createTaskMutation.error?.message ?? updateTaskMutation.error?.message;
 
-  async function handleSubmit(values: TaskMutationInput) {
-    setFeedback(null);
+  async function handleSubmit(values: TaskMutationInput, pendingFiles: File[]) {
     createTaskMutation.reset();
     updateTaskMutation.reset();
 
@@ -74,17 +70,26 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
           assigneeId: values.assigneeId,
           position,
         });
+        if (pendingFiles.length > 0) {
+          await Promise.all(
+            pendingFiles.map((file) =>
+              uploadTaskAttachment(board.id, editingTask.id, file),
+            ),
+          );
+        }
         closeTaskForm();
-        setFeedback({
-          kind: "success",
-          message: "Task changes saved.",
-        });
+        showToast(
+          "success",
+          pendingFiles.length > 0
+            ? "Task changes saved and attachments uploaded."
+            : "Task changes saved.",
+        );
         return;
       }
 
       const position = getNextTaskPosition(tasksQuery.data ?? [], values.status);
 
-      await createTaskMutation.mutateAsync({
+      const createdTask = await createTaskMutation.mutateAsync({
         title: values.title,
         description: values.description,
         status: values.status,
@@ -94,29 +99,30 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         assigneeId: values.assigneeId,
         position,
       });
+      if (pendingFiles.length > 0) {
+        await Promise.all(
+          pendingFiles.map((file) =>
+            uploadTaskAttachment(board.id, createdTask.id, file),
+          ),
+        );
+      }
       closeTaskForm();
-      setFeedback({
-        kind: "success",
-        message: "Task created successfully.",
-      });
+      showToast(
+        "success",
+        pendingFiles.length > 0
+          ? "Task created and attachments uploaded."
+          : "Task created successfully.",
+      );
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to save the task.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to save the task.",
+      );
     }
   }
 
   return (
     <>
-      {feedback ? (
-        <FeedbackNotice
-          kind={feedback.kind}
-          message={feedback.message}
-          onDismiss={() => setFeedback(null)}
-        />
-      ) : null}
       <TaskBoard
         board={board}
         viewer={viewer}
@@ -128,6 +134,7 @@ export function TaskBoardShell({ board, viewer }: TaskBoardShellProps) {
         key={`${editingTask?.id ?? "create"}-${isTaskFormOpen ? "open" : "closed"}`}
         mode={editingTask ? "edit" : "create"}
         task={editingTask}
+        initialStatus={createTaskStatus}
         isOpen={isTaskFormOpen}
         boardId={board.id}
         members={membersQuery.data ?? []}

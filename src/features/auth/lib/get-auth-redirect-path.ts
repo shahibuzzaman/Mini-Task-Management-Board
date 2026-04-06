@@ -1,10 +1,10 @@
 export function getAuthRedirectPath(nextPath: string | null): string {
   if (!nextPath || !nextPath.startsWith("/")) {
-    return "/board";
+    return "/dashboard";
   }
 
   if (nextPath.startsWith("//")) {
-    return "/board";
+    return "/dashboard";
   }
 
   return nextPath;

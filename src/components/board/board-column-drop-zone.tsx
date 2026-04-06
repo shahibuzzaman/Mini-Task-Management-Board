@@ -24,8 +24,8 @@ export function BoardColumnDropZone({
     <div
       ref={setNodeRef}
       className={[
-        "flex flex-1 flex-col gap-3 rounded-xl transition-colors",
-        isOver ? "bg-sky-50" : "",
+        "flex flex-1 flex-col rounded-2xl transition-colors",
+        isOver ? "bg-slate-100/70" : "",
       ].join(" ")}
     >
       {children}

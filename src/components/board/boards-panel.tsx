@@ -1,19 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { CreateBoardForm } from "@/components/board/create-board-form";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
+import { getBoardPath } from "@/features/boards/lib/board-routes";
 import { getBoardTheme } from "@/features/boards/lib/board-theme";
-import { useCreateBoardMutation } from "@/features/boards/hooks/use-create-board-mutation";
 import type { BoardSummary } from "@/features/boards/types/board";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useUIStore } from "@/store/ui-store-provider";
 
 type BoardsPanelProps = {
   boards: BoardSummary[];
@@ -21,31 +13,9 @@ type BoardsPanelProps = {
 };
 
 export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
-  const router = useRouter();
   const boardsQuery = useBoardsQuery(boards);
-  const createBoardMutation = useCreateBoardMutation();
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
   const boardList = boardsQuery.data ?? boards;
-
-  async function handleCreateBoard(name: string) {
-    setFeedback(null);
-
-    try {
-      const board = await createBoardMutation.mutateAsync({ name });
-      setFeedback({
-        kind: "success",
-        message: "Board created successfully.",
-      });
-      router.replace(`/board?boardId=${board.id}`);
-      router.refresh();
-    } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to create the board.",
-      });
-    }
-  }
+  const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -57,17 +27,6 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
           Create a board, switch between boards, and manage access per board.
         </p>
       </header>
-
-      {feedback ? (
-        <div className="mt-5">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       <div className="mt-5 space-y-3">
         {boardList.length > 0 ? (
           boardList.map((board) => {
@@ -77,7 +36,7 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
             return (
               <Link
                 key={board.id}
-                href={`/board?boardId=${board.id}`}
+                href={getBoardPath(board.id)}
                 className={[
                   "block rounded-2xl border px-4 py-3 transition",
                   isActive
@@ -92,16 +51,19 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
                     </p>
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
                       {board.currentUserRole}
+                      {board.isPinned ? " · pinned" : ""}
                       {board.archivedAt ? " · archived" : ""}
                     </p>
                   </div>
-                  {isActive ? (
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${theme.badgeClassName}`}
-                    >
-                      Active
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {isActive ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${theme.badgeClassName}`}
+                      >
+                        Active
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </Link>
             );
@@ -114,10 +76,13 @@ export function BoardsPanel({ boards, activeBoardId }: BoardsPanelProps) {
       </div>
 
       <div className="mt-5 border-t border-slate-200 pt-5">
-        <CreateBoardForm
-          isPending={createBoardMutation.isPending}
-          onSubmit={handleCreateBoard}
-        />
+        <button
+          type="button"
+          onClick={openCreateBoardModal}
+          className="w-full rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700"
+        >
+          Create board
+        </button>
       </div>
     </section>
   );

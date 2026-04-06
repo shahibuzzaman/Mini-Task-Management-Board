@@ -4,8 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { BoardLoadingState } from "@/components/board/board-loading-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
+import { TaskActivityLoadingState } from "@/components/board/board-loading-state";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import {
   formatTaskAttachmentSize,
@@ -30,23 +29,20 @@ import type {
   TaskMutationInput,
 } from "@/features/tasks/types/task-form";
 import type { BoardMember } from "@/features/boards/types/board-member";
+import { useToast } from "@/store/use-toast";
 
 type TaskFormModalProps = {
   boardId: string;
   mode: "create" | "edit";
   task?: Task;
+  initialStatus?: TaskEditorValues["status"];
   members: BoardMember[];
   isOpen: boolean;
   isPending: boolean;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: TaskMutationInput) => Promise<void>;
+  onSubmit: (values: TaskMutationInput, pendingFiles: File[]) => Promise<void>;
 };
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 const DEFAULT_VALUES: TaskEditorValues = {
   title: "",
@@ -58,9 +54,15 @@ const DEFAULT_VALUES: TaskEditorValues = {
   assigneeId: "",
 };
 
-function getInitialValues(task?: Task): TaskEditorValues {
+function getInitialValues(
+  task?: Task,
+  initialStatus: TaskEditorValues["status"] = "todo",
+): TaskEditorValues {
   if (!task) {
-    return DEFAULT_VALUES;
+    return {
+      ...DEFAULT_VALUES,
+      status: initialStatus,
+    };
   }
 
   return {
@@ -78,6 +80,7 @@ export function TaskFormModal({
   boardId,
   mode,
   task,
+  initialStatus = "todo",
   members,
   isOpen,
   isPending,
@@ -88,15 +91,16 @@ export function TaskFormModal({
   const titleId = useId();
   const descriptionId = useId();
   const statusId = useId();
-  const priorityId = useId();
-  const dueAtId = useId();
   const labelsId = useId();
   const assigneeId = useId();
 
   const [commentBody, setCommentBody] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const initialValues = useMemo(() => getInitialValues(task), [task]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const showToast = useToast();
+  const initialValues = useMemo(
+    () => getInitialValues(task, initialStatus),
+    [initialStatus, task],
+  );
 
   const form = useForm<TaskFormSchema>({
     resolver: zodResolver(taskFormSchema),
@@ -149,46 +153,32 @@ export function TaskFormModal({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await createCommentMutation.mutateAsync(commentBody.trim());
       setCommentBody("");
-      setFeedback({
-        kind: "success",
-        message: "Comment added.",
-      });
+      showToast("success", "Comment added.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to add the comment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to add the comment.",
+      );
     }
   }
 
-  async function handleUploadAttachment() {
-    if (!task || !selectedFile) {
+  async function handleUploadAttachment(file: File) {
+    if (!task) {
       return;
     }
-
-    setFeedback(null);
-
     try {
-      await uploadAttachmentMutation.mutateAsync(selectedFile);
-      setSelectedFile(null);
-      setFeedback({
-        kind: "success",
-        message: "Attachment uploaded.",
-      });
+      await uploadAttachmentMutation.mutateAsync(file);
+      showToast("success", "Attachment uploaded.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to upload the attachment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to upload the attachment.",
+      );
     }
   }
 
@@ -197,127 +187,107 @@ export function TaskFormModal({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await deleteAttachmentMutation.mutateAsync(attachmentIdToRemove);
-      setFeedback({
-        kind: "success",
-        message: "Attachment removed.",
-      });
+      showToast("success", "Attachment removed.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to remove the attachment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the attachment.",
+      );
     }
   }
 
+  const labelClass = "block text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d] mb-2";
+  const inputClass = "block w-full rounded-xl border border-transparent bg-surface-container-low px-4 py-3.5 text-[14px] text-slate-800 outline-none transition focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary";
+
+  function handleQueueFiles(files: FileList | null) {
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    setPendingFiles((currentFiles) => [...currentFiles, ...Array.from(files)]);
+  }
+
+  function handleRemovePendingFile(indexToRemove: number) {
+    setPendingFiles((currentFiles) =>
+      currentFiles.filter((_, index) => index !== indexToRemove),
+    );
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="task-form-title"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
       <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        className="absolute inset-0 bg-slate-900/10 backdrop-blur-[4px] transition-all"
+        onClick={onClose}
+      />
+      <div
+        className="relative flex max-h-[90vh] w-full max-w-[580px] flex-col overflow-y-auto rounded-xl bg-[#f0f2f8] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.15)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-form-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 id="task-form-title" className="text-xl font-semibold text-slate-950">
-              {mode === "create" ? "Create task" : "Edit task"}
+        <div className="p-6 sm:p-8">
+          <div className="mb-2 flex items-start justify-between">
+            <h2 id="task-form-title" className="text-[22px] font-bold tracking-tight text-slate-900">
+              {mode === "create" ? "Create Task" : "Edit Task"}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {mode === "create"
-                ? "Add a new task with assignee, priority, labels, and due date."
-                : "Update task details, attachments, and discussion in one place."}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            Close
-          </button>
-        </div>
-
-        {feedback ? (
-          <div className="mt-5">
-            <FeedbackNotice
-              kind={feedback.kind}
-              message={feedback.message}
-              onDismiss={() => setFeedback(null)}
-            />
-          </div>
-        ) : null}
-
-        <form
-          className="mt-6 space-y-5"
-          onSubmit={form.handleSubmit(async (values) => {
-            await onSubmit({
-              title: values.title.trim(),
-              description: values.description.trim(),
-              status: values.status,
-              priority: values.priority,
-              dueAt: normalizeTaskDueAt(values.dueAt),
-              labels: parseTaskLabels(values.labels),
-              assigneeId: values.assigneeId.trim() || null,
-            });
-          })}
-        >
-          <div>
-            <label
-              htmlFor={titleId}
-              className="block text-sm font-medium text-slate-800"
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-200/50 hover:text-slate-700"
             >
-              Title
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <p className="mb-8 pr-8 text-[14px] font-medium leading-relaxed text-slate-500">
+            {mode === "create"
+              ? "Capture the next piece of work with assignee, priority, labels, and supporting files."
+              : "Refine task details, update ownership, and keep the implementation context in one place."}
+          </p>
+
+          <form
+            className="space-y-6"
+            onSubmit={form.handleSubmit(async (values) => {
+              await onSubmit({
+                title: values.title.trim(),
+                description: values.description.trim(),
+                status: values.status,
+                priority: values.priority,
+                dueAt: normalizeTaskDueAt(values.dueAt),
+                labels: parseTaskLabels(values.labels),
+                assigneeId: values.assigneeId.trim() || null,
+              }, pendingFiles);
+            })}
+          >
+          <div>
+            <label htmlFor={titleId} className={labelClass}>
+              Task Title
             </label>
             <input
               id={titleId}
               autoFocus
               type="text"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              placeholder="Enter task title..."
+              className={inputClass}
               {...form.register("title")}
             />
             <FieldError message={form.formState.errors.title?.message} />
           </div>
 
-          <div>
-            <label
-              htmlFor={descriptionId}
-              className="block text-sm font-medium text-slate-800"
-            >
-              Description
-            </label>
-            <textarea
-              id={descriptionId}
-              rows={5}
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-              {...form.register("description")}
-            />
-            <FieldError message={form.formState.errors.description?.message} />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-[1fr_auto]">
             <div>
-              <label
-                htmlFor={statusId}
-                className="block text-sm font-medium text-slate-800"
-              >
-                Column
+              <label htmlFor={statusId} className={labelClass}>
+                Status
               </label>
-              <select
-                id={statusId}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                {...form.register("status")}
-              >
+              <select id={statusId} className={inputClass} {...form.register("status")}>
                 {TASK_COLUMNS.map((column) => (
                   <option key={column.status} value={column.status}>
                     {column.title}
@@ -327,85 +297,196 @@ export function TaskFormModal({
             </div>
 
             <div>
-              <label
-                htmlFor={priorityId}
-                className="block text-sm font-medium text-slate-800"
-              >
+              <label className={labelClass}>
                 Priority
               </label>
-              <select
-                id={priorityId}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                {...form.register("priority")}
-              >
-                {TASK_PRIORITIES.map((priority) => (
-                  <option key={priority.value} value={priority.value}>
-                    {priority.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label
-                htmlFor={dueAtId}
-                className="block text-sm font-medium text-slate-800"
-              >
-                Due date
-              </label>
-              <input
-                id={dueAtId}
-                type="datetime-local"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                {...form.register("dueAt")}
-              />
-              <FieldError message={form.formState.errors.dueAt?.message} />
-            </div>
-
-            <div>
-              <label
-                htmlFor={assigneeId}
-                className="block text-sm font-medium text-slate-800"
-              >
-                Assignee
-              </label>
-              <select
-                id={assigneeId}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                {...form.register("assigneeId")}
-              >
-                <option value="">Unassigned</option>
-                {sortedMembers.map((member) => (
-                  <option key={member.userId} value={member.userId}>
-                    {member.displayName}
-                  </option>
-                ))}
-              </select>
-              <FieldError message={form.formState.errors.assigneeId?.message} />
+              <div className="flex gap-2">
+                {TASK_PRIORITIES.map((priority) => {
+                  const isSelected = form.watch("priority") === priority.value;
+                  return (
+                    <button
+                      key={priority.value}
+                      type="button"
+                      onClick={() => form.setValue("priority", priority.value)}
+                      className={`min-w-[70px] rounded-lg px-4 py-3.5 text-[11px] font-bold uppercase tracking-widest transition ${
+                        isSelected
+                          ? "bg-primary text-white"
+                          : "bg-surface-container-high text-primary/70 hover:bg-[#d5dcf5]"
+                      }`}
+                    >
+                      {priority.value === "medium" ? "MED" : priority.value === "urgent" ? "URG" : priority.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor={labelsId}
-              className="block text-sm font-medium text-slate-800"
-            >
+            <label htmlFor={descriptionId} className={labelClass}>
+              Description
+            </label>
+            <textarea
+              id={descriptionId}
+              rows={4}
+              placeholder="Add a detailed description..."
+              className={inputClass}
+              {...form.register("description")}
+            />
+            <FieldError message={form.formState.errors.description?.message} />
+          </div>
+
+          <div>
+            <label htmlFor={assigneeId} className={labelClass}>
+              Assignee
+            </label>
+            <select id={assigneeId} className={inputClass} {...form.register("assigneeId")}>
+              <option value="">Unassigned</option>
+              {sortedMembers.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {member.displayName}
+                </option>
+              ))}
+            </select>
+            <FieldError message={form.formState.errors.assigneeId?.message} />
+          </div>
+
+          <div>
+            <label htmlFor={labelsId} className={labelClass}>
               Labels
             </label>
             <input
               id={labelsId}
               type="text"
-              placeholder="design, frontend, blocked"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              placeholder="Design, High Priority, Feature, Bug"
+              className={inputClass}
               {...form.register("labels")}
             />
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              Separate labels with commas. Up to 8 labels are supported.
-            </p>
             <FieldError message={form.formState.errors.labels?.message} />
           </div>
+
+          {task ? (
+            <div>
+              <label className={labelClass}>
+                File Attachment
+              </label>
+              <div className="relative mt-2 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-indigo-200 bg-surface-container-low px-6 py-10 text-center transition hover:border-indigo-300 hover:bg-surface-container-high">
+                <svg className="mb-3 h-8 w-8 text-indigo-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+                </svg>
+                <p className="text-[14px] font-bold text-slate-800">Drop files here or click to upload</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-500">PDF, PNG, JPG or ZIP (max. 10MB)</p>
+                <input
+                  type="file"
+                  disabled={uploadAttachmentMutation.isPending}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) handleUploadAttachment(file);
+                  }}
+                  className="absolute inset-0 z-50 h-full w-full cursor-pointer opacity-0"
+                  title="Upload file"
+                />
+              </div>
+              {uploadAttachmentMutation.isPending && (
+                <p className="mt-2 text-sm text-slate-500">Uploading...</p>
+              )}
+
+              {detailsQuery.data && detailsQuery.data.attachments.length > 0 && (
+                <ul className="mt-4 space-y-3">
+                  {detailsQuery.data.attachments.map((attachment) => (
+                    <li
+                      key={attachment.id}
+                      className="flex items-center justify-between rounded-xl bg-surface-container-low px-4 py-3"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-container-high text-primary">
+                          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <a
+                            href={attachment.publicUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[13px] font-bold text-slate-800 underline-offset-4 hover:underline"
+                          >
+                            {attachment.fileName}
+                          </a>
+                          <p className="text-[11px] font-medium text-slate-500">
+                            {formatTaskAttachmentSize(attachment.sizeBytes)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          deleteAttachmentMutation.isPending &&
+                          deleteAttachmentMutation.variables === attachment.id
+                        }
+                        onClick={() => void handleRemoveAttachment(attachment.id)}
+                        className="text-slate-400 transition hover:text-slate-600"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-indigo-200 bg-surface-container-low px-6 py-10 text-center transition hover:border-indigo-300 hover:bg-surface-container-high">
+                <svg className="mb-3 h-8 w-8 text-indigo-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+                </svg>
+                <p className="text-[14px] font-bold text-slate-800">Choose files now</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-500">They will upload automatically after the task is created.</p>
+                <input
+                  type="file"
+                  multiple
+                  disabled={isPending}
+                  onChange={(event) => {
+                    handleQueueFiles(event.target.files);
+                    event.currentTarget.value = "";
+                  }}
+                  className="absolute inset-0 z-50 h-full w-full cursor-pointer opacity-0"
+                  title="Select files"
+                />
+              </div>
+
+              {pendingFiles.length > 0 ? (
+                <ul className="space-y-3">
+                  {pendingFiles.map((file, index) => (
+                    <li
+                      key={`${file.name}-${file.size}-${index}`}
+                      className="flex items-center justify-between rounded-xl bg-surface-container-low px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-[13px] font-bold text-slate-800">
+                          {file.name}
+                        </p>
+                        <p className="text-[11px] font-medium text-slate-500">
+                          {formatTaskAttachmentSize(file.size)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePendingFile(index)}
+                        className="text-slate-400 transition hover:text-slate-600"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-[13px] leading-relaxed text-slate-500">
+                Comments become available after the task is created.
+              </div>
+            </div>
+          )}
 
           {errorMessage ? (
             <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -413,129 +494,46 @@ export function TaskFormModal({
             </p>
           ) : null}
 
-          <div className="flex justify-end gap-3">
+          <div className="mt-8 flex items-center justify-end gap-6 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="text-[15px] font-bold text-primary transition hover:text-primary/80"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+              className="rounded-xl bg-primary px-8 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
             >
               {isPending
                 ? mode === "create"
                   ? "Creating..."
                   : "Saving..."
                 : mode === "create"
-                  ? "Create task"
-                  : "Save changes"}
+                  ? "Create Task"
+                  : "Save Changes"}
             </button>
           </div>
-        </form>
+          </form>
 
-        {task ? (
-          <div className="mt-8 grid gap-6 border-t border-slate-200 pt-6 lg:grid-cols-2">
+          {task ? (
+          <div className="mt-10 border-t border-slate-200 pt-8">
             <section>
               <header>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  Attachments
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Upload supporting files up to 10 MB.
-                </p>
-              </header>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  type="file"
-                  onChange={(event) =>
-                    setSelectedFile(event.target.files?.[0] ?? null)
-                  }
-                  className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                />
-                <button
-                  type="button"
-                  disabled={!selectedFile || uploadAttachmentMutation.isPending}
-                  onClick={() => void handleUploadAttachment()}
-                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                >
-                  {uploadAttachmentMutation.isPending
-                    ? "Uploading..."
-                    : "Upload attachment"}
-                </button>
-              </div>
-
-              <div className="mt-4">
-                {detailsQuery.isLoading ? (
-                  <BoardLoadingState />
-                ) : detailsQuery.isError ? (
-                  <BoardErrorState message={detailsQuery.error.message} />
-                ) : detailsQuery.data && detailsQuery.data.attachments.length > 0 ? (
-                  <ul className="space-y-3">
-                    {detailsQuery.data.attachments.map((attachment) => (
-                      <li
-                        key={attachment.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <a
-                              href={attachment.publicUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sm font-semibold text-slate-950 underline-offset-4 hover:underline"
-                            >
-                              {attachment.fileName}
-                            </a>
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                              {formatTaskAttachmentSize(attachment.sizeBytes)} · Uploaded by{" "}
-                              {attachment.uploadedByName}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={
-                              deleteAttachmentMutation.isPending &&
-                              deleteAttachmentMutation.variables === attachment.id
-                            }
-                            onClick={() => void handleRemoveAttachment(attachment.id)}
-                            className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600">
-                    No attachments yet.
-                  </p>
-                )}
-              </div>
-            </section>
-
-            <section>
-              <header>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+                <h3 className={labelClass}>
                   Comments
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Capture discussion and implementation notes.
-                </p>
               </header>
 
               <div className="mt-4 space-y-3">
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={commentBody}
                   onChange={(event) => setCommentBody(event.target.value)}
                   placeholder="Add context for the next collaborator..."
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  className={inputClass}
                 />
                 <button
                   type="button"
@@ -543,15 +541,15 @@ export function TaskFormModal({
                     commentBody.trim().length === 0 || createCommentMutation.isPending
                   }
                   onClick={() => void handleCreateComment()}
-                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                  className="rounded-lg bg-surface-container-high px-5 py-2.5 text-[13px] font-bold text-primary transition hover:bg-[#d5dcf5] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {createCommentMutation.isPending ? "Posting..." : "Add comment"}
+                  {createCommentMutation.isPending ? "Posting..." : "Add Comment"}
                 </button>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-6">
                 {detailsQuery.isLoading ? (
-                  <BoardLoadingState />
+                  <TaskActivityLoadingState rows={3} />
                 ) : detailsQuery.isError ? (
                   <BoardErrorState message={detailsQuery.error.message} />
                 ) : detailsQuery.data && detailsQuery.data.comments.length > 0 ? (
@@ -559,10 +557,10 @@ export function TaskFormModal({
                     {detailsQuery.data.comments.map((comment) => (
                       <li
                         key={comment.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                        className="rounded-2xl border border-transparent bg-surface-container-low px-5 py-4"
                       >
-                        <p className="text-sm leading-6 text-slate-700">{comment.body}</p>
-                        <p className="mt-3 text-xs leading-5 text-slate-500">
+                        <p className="text-[14px] leading-relaxed text-slate-700">{comment.body}</p>
+                        <p className="mt-3 text-[11px] font-medium tracking-wide text-slate-500">
                           {comment.createdByName}
                           {formatTaskDueAt(comment.createdAt)
                             ? ` · ${formatTaskDueAt(comment.createdAt)}`
@@ -572,14 +570,15 @@ export function TaskFormModal({
                     ))}
                   </ul>
                 ) : (
-                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600">
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-[13px] text-slate-500">
                     No comments yet.
                   </p>
                 )}
               </div>
             </section>
           </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );

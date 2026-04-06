@@ -1,16 +1,16 @@
-import { BoardPageShell } from "@/components/board/board-page-shell";
+import { BoardTasksPage } from "@/components/board/board-tasks-page";
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
 import { getBoardShellData } from "@/features/boards/lib/get-board-shell-data";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 
 type BoardPageProps = {
-  searchParams: Promise<{
-    boardId?: string;
+  params: Promise<{
+    boardId: string;
   }>;
 };
 
-export default async function BoardPage({ searchParams }: BoardPageProps) {
+export default async function BoardPage({ params }: BoardPageProps) {
   const config = getSupabaseBrowserConfig();
 
   if (!config.isConfigured) {
@@ -21,15 +21,21 @@ export default async function BoardPage({ searchParams }: BoardPageProps) {
           missingEnvVars={config.missingEnvVars}
         />
       </main>
-      );
+    );
   }
 
-  const { boardId } = await searchParams;
-  const { viewer, boards, board, redirectBoardId } = await getBoardShellData(boardId);
+  const { boardId } = await params;
+  const { viewer, board, redirectBoardId } = await getBoardShellData(boardId);
 
   if (redirectBoardId && redirectBoardId !== boardId) {
-    redirect(`/board?boardId=${redirectBoardId}`);
+    redirect(`/boards/${redirectBoardId}`);
   }
 
-  return <BoardPageShell viewer={viewer} boards={boards} board={board} />;
+  if (!board) {
+    redirect("/boards");
+  }
+
+  return (
+    <BoardTasksPage board={board} viewer={viewer} />
+  );
 }

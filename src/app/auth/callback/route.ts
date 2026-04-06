@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseRouteHandlerClient(response);
 
   if (!supabase) {
-    return NextResponse.redirect(new URL("/auth", url.origin));
+    return NextResponse.redirect(new URL("/signin", url.origin));
   }
 
   if (code) {

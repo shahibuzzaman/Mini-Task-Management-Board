@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { BoardLoadingState } from "@/components/board/board-loading-state";
+import { BoardPanelLoadingState } from "@/components/board/board-loading-state";
 import { useBoardInvitationsQuery } from "@/features/boards/hooks/use-board-invitations-query";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
 import {
@@ -82,7 +82,7 @@ export function BoardAdminToolsPanel({ board }: BoardAdminToolsPanelProps) {
         ) : tasksQuery.isError ? (
           <BoardErrorState message={tasksQuery.error.message} />
         ) : membersQuery.isLoading || invitationsQuery.isLoading || tasksQuery.isLoading ? (
-          <BoardLoadingState />
+          <BoardPanelLoadingState />
         ) : (
           <>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700">

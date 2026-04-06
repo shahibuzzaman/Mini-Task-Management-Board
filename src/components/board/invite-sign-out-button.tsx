@@ -18,7 +18,7 @@ export function InviteSignOutButton({ nextPath }: InviteSignOutButtonProps) {
     }
 
     await supabase.auth.signOut();
-    router.replace(`/auth?next=${encodeURIComponent(nextPath)}`);
+    router.replace(`/signin?next=${encodeURIComponent(nextPath)}`);
     router.refresh();
   }
 
