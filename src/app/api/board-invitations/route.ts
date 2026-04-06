@@ -8,11 +8,13 @@ import {
 } from "@/features/boards/lib/board-permissions";
 import { getBoardInvitations } from "@/features/boards/lib/get-board-invitations";
 import { getCurrentBoardAccess } from "@/features/boards/lib/get-current-board-access";
+import { mapBoardMemberRowToBoardMember } from "@/features/boards/lib/map-board-member-row";
 import { mapBoardInvitationRowToBoardInvitation } from "@/features/boards/lib/map-board-invitation-row";
 import { sendBoardInvitationEmail } from "@/features/boards/lib/send-board-invitation-email";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseEmailClient } from "@/lib/supabase/email";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { BoardRole } from "@/types/database";
 
 const BOARD_INVITATION_SELECT = `
   id,
@@ -33,6 +35,25 @@ const BOARD_INVITATION_SELECT = `
 type MembershipRow = {
   user_id: string;
 };
+
+type InsertedBoardMemberRow = {
+  board_id: string;
+  user_id: string;
+  role: BoardRole;
+  created_at: string;
+  profile: {
+    display_name: string | null;
+    email: string;
+  } | null;
+};
+
+const BOARD_MEMBER_SELECT = `
+  board_id,
+  user_id,
+  role,
+  created_at,
+  profile:profiles!board_members_user_id_fkey(display_name, email)
+`;
 
 export async function GET(request: Request) {
   try {
@@ -144,10 +165,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const inviteEmail = parsed.data.email.toLowerCase();
+    const targetRole =
+      board.currentUserRole === "member"
+        ? board.defaultInviteRole
+        : parsed.data.role;
+
     const { data: existingMembership } = await adminClient
       .from("profiles")
       .select("id")
-      .eq("email", parsed.data.email.toLowerCase())
+      .eq("email", inviteEmail)
       .maybeSingle();
 
     if (existingMembership) {
@@ -164,13 +191,50 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
+
+      const { data: insertedMembership, error: membershipInsertError } =
+        await adminClient
+          .from("board_members")
+          .insert({
+            board_id: board.id,
+            user_id: existingMembership.id,
+            role: targetRole,
+          })
+          .select(BOARD_MEMBER_SELECT)
+          .single();
+
+      if (membershipInsertError) {
+        return NextResponse.json(
+          { error: membershipInsertError.message },
+          { status: 400 },
+        );
+      }
+
+      await adminClient
+        .from("board_invitations")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("board_id", board.id)
+        .eq("email", inviteEmail)
+        .is("accepted_at", null)
+        .is("revoked_at", null);
+
+      return NextResponse.json(
+        {
+          type: "member_added",
+          member: mapBoardMemberRowToBoardMember(
+            insertedMembership as unknown as InsertedBoardMemberRow,
+            { id: user.id },
+          ),
+        },
+        { status: 201 },
+      );
     }
 
     const { data: existingInvitation } = await adminClient
       .from("board_invitations")
       .select("id")
       .eq("board_id", board.id)
-      .eq("email", parsed.data.email.toLowerCase())
+      .eq("email", inviteEmail)
       .is("accepted_at", null)
       .is("revoked_at", null)
       .maybeSingle();
@@ -186,13 +250,10 @@ export async function POST(request: Request) {
       .from("board_invitations")
       .insert({
         board_id: board.id,
-        email: parsed.data.email.toLowerCase(),
-        role:
-          board.currentUserRole === "member"
-            ? board.defaultInviteRole
-            : parsed.data.role,
+        email: inviteEmail,
+        role: targetRole,
         invited_by: user.id,
-        invited_user_id: existingMembership?.id ?? null,
+        invited_user_id: null,
         token: randomBytes(24).toString("hex"),
         token_expires_at: new Date(
           Date.now() + 1000 * 60 * 60 * 24 * 7,
@@ -233,7 +294,13 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(invitation, { status: 201 });
+    return NextResponse.json(
+      {
+        type: "invitation_sent",
+        invitation,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     return NextResponse.json(
       {

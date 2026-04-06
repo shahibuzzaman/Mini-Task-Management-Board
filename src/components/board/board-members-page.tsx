@@ -64,13 +64,18 @@ export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
     }
 
     try {
-      await createInvitationMutation.mutateAsync({
+      const result = await createInvitationMutation.mutateAsync({
         email: inviteEmail.trim(),
         role: canReviewInvitations ? inviteRole : board.defaultInviteRole,
       });
       setInviteEmail("");
       setInviteRole(board.defaultInviteRole);
-      showToast("success", "Invitation sent.");
+      showToast(
+        "success",
+        result.type === "member_added"
+          ? "Member added to the board."
+          : "Invitation sent.",
+      );
     } catch (error) {
       showToast(
         "error",
