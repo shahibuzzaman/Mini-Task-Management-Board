@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AddBoardMemberForm } from "@/components/board/add-board-member-form";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { BoardMemberRow } from "@/components/board/board-member-row";
 import { useAddBoardMemberMutation } from "@/features/boards/hooks/use-add-board-member-mutation";
@@ -13,11 +12,7 @@ import { useUpdateBoardMemberMutation } from "@/features/boards/hooks/use-update
 import type { BoardSummary } from "@/features/boards/types/board";
 import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardRole } from "@/types/database";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type BoardMembersPanelProps = {
   board: BoardSummary;
@@ -32,68 +27,50 @@ export function BoardMembersPanel({
   const addMemberMutation = useAddBoardMemberMutation(board.id);
   const updateMemberMutation = useUpdateBoardMemberMutation(board.id);
   const removeMemberMutation = useRemoveBoardMemberMutation(board.id);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const canManageMembers =
     board.currentUserRole === "owner" || board.currentUserRole === "admin";
 
   const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
 
   async function handleAddMember(email: string) {
-    setFeedback(null);
-
     try {
       await addMemberMutation.mutateAsync({ email });
-      setFeedback({
-        kind: "success",
-        message: "Board member added.",
-      });
+      showToast("success", "Board member added.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to add the member.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to add the member.",
+      );
       throw error;
     }
   }
 
   async function handleRoleChange(userId: string, role: BoardRole) {
-    setFeedback(null);
-
     try {
       await updateMemberMutation.mutateAsync({ userId, role });
-      setFeedback({
-        kind: "success",
-        message: "Member role updated.",
-      });
+      showToast("success", "Member role updated.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to update the member role.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to update the member role.",
+      );
     }
   }
 
   async function handleRemoveMember(userId: string) {
-    setFeedback(null);
-
     try {
       await removeMemberMutation.mutateAsync(userId);
-      setFeedback({
-        kind: "success",
-        message: "Board member removed.",
-      });
+      showToast("success", "Board member removed.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to remove the board member.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the board member.",
+      );
     }
   }
 
@@ -116,17 +93,6 @@ export function BoardMembersPanel({
           {board.currentUserRole}
         </span>
       </div>
-
-      {feedback ? (
-        <div className="mt-5">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       {canManageMembers ? (
         <div className="mt-5">
           <AddBoardMemberForm

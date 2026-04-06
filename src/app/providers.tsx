@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { ToastViewport } from "@/components/ui/toast-viewport";
 import { UIStoreProvider } from "@/store/ui-store-provider";
 
 type ProvidersProps = {
@@ -22,7 +23,10 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <UIStoreProvider>{children}</UIStoreProvider>
+      <UIStoreProvider>
+        {children}
+        <ToastViewport />
+      </UIStoreProvider>
     </QueryClientProvider>
   );
 }

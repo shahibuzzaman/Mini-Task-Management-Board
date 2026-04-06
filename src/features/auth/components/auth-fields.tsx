@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 export function AuthField({
   label,
@@ -50,6 +50,63 @@ export function AuthFeedback({
         <svg fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 mt-0.5 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       )}
       <div className="leading-snug pt-0.5 max-w-[280px]">{message}</div>
+    </div>
+  );
+}
+
+type PasswordInputProps = Omit<ComponentPropsWithoutRef<"input">, "type">;
+
+export function PasswordInput({ className = "", ...props }: PasswordInputProps) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={isVisible ? "text" : "password"}
+        className={`${className} pr-12`}
+        {...props}
+      />
+      <button
+        type="button"
+        aria-label={isVisible ? "Hide password" : "Show password"}
+        aria-pressed={isVisible}
+        onClick={() => setIsVisible((current) => !current)}
+        className="absolute right-3 top-1/2 mt-[3px] -translate-y-1/2 rounded-md p-1.5 text-on-surface-variant transition hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3525cd]"
+      >
+        {isVisible ? (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 3l18 18" />
+            <path d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.42-1.22" />
+            <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-.55 1.17-1.3 2.27-2.19 3.24" />
+            <path d="M6.61 6.61C4.62 7.9 3.12 9.76 2 12c.91 1.94 2.39 3.78 4.33 5.1" />
+          </svg>
+        ) : (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M2 12s3.64-7 10-7 10 7 10 7-3.64 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }

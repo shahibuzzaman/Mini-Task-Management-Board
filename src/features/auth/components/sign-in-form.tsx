@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import {
@@ -10,24 +9,30 @@ import {
   type LoginFormSchema,
 } from "@/features/auth/lib/auth-form-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AuthField, AuthFeedback } from "./auth-fields";
+import { useToast } from "@/store/use-toast";
+import { AuthField, PasswordInput } from "./auth-fields";
 
-export function SignInForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
+export function SignInForm({
+  nextPath = "/dashboard",
+  initialEmail = "",
+}: {
+  nextPath?: string;
+  initialEmail?: string;
+}) {
   const router = useRouter();
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const showToast = useToast();
   const supabase = getSupabaseBrowserClient();
   
   const loginForm = useForm<LoginFormSchema>({
     resolver: zodResolver(loginFormSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: initialEmail, password: "" },
   });
 
   const isPending = loginForm.formState.isSubmitting;
 
   async function handleLogin(values: LoginFormSchema) {
-    setFeedback(null);
     if (!supabase) {
-      setFeedback({ kind: "error", message: "Supabase is not configured. Add the public URL and anon key first." });
+      showToast("error", "Supabase is not configured. Add the public URL and anon key first.");
       return;
     }
 
@@ -37,7 +42,7 @@ export function SignInForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
     });
 
     if (error) {
-      setFeedback({ kind: "error", message: error.message });
+      showToast("error", error.message);
       return;
     }
 
@@ -83,8 +88,7 @@ export function SignInForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
                 <Link href="/forgot-password" className="text-xs font-bold text-[#3525cd] hover:text-[#4f46e5] transition-colors">Forgot password?</Link>
               }
             >
-              <input
-                type="password"
+              <PasswordInput
                 placeholder="••••••••"
                 autoComplete="current-password"
                 className="mt-1.5 w-full rounded-xl bg-surface-container-low px-4 py-[14px] text-[15px] text-on-surface placeholder:text-on-surface-variant/40 outline-none transition border border-transparent focus:bg-surface-container-lowest focus:border-primary focus:shadow-sm placeholder:tracking-[0.2em]"
@@ -92,9 +96,6 @@ export function SignInForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
               />
             </AuthField>
           </div>
-
-          {feedback && <AuthFeedback {...feedback} />}
-
           <button
             type="submit"
             disabled={isPending}
@@ -113,29 +114,6 @@ export function SignInForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
           </div>
         </form>
       </section>
-
-      <div className="grid grid-cols-2 gap-4 mt-8 px-1">
-        <div className="bg-surface-container-low/80 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 border border-outline-variant/10 shadow-sm">
-          <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-container-lowest flex-shrink-0 flex items-center justify-center border border-outline-variant/20 relative">
-              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full object-cover"><path d="M18 17a6 6 0 100-12 6 6 0 000 12zM9 25a9 9 0 0118 0" fill="#cbd5e1"/></svg>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://i.pravatar.cc/100?img=11" alt="Avatar" className="w-full h-full object-cover absolute inset-0 opacity-80" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[9px] font-extrabold tracking-[0.1em] text-on-surface-variant uppercase">Trusted by</span>
-            <span className="text-[12px] font-extrabold text-on-surface leading-tight mt-0.5">10K+ Architects</span>
-          </div>
-        </div>
-        <div className="bg-surface-container-low/80 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 border border-outline-variant/10 shadow-sm">
-            <div className="w-9 h-9 rounded-full bg-surface-container-lowest shadow-sm flex items-center justify-center text-tertiary flex-shrink-0 border border-outline-variant/20">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00505f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div className="flex flex-col pl-0.5">
-            <span className="text-[9px] font-extrabold tracking-[0.1em] text-on-surface-variant uppercase">Security</span>
-            <span className="text-[12px] font-extrabold text-on-surface leading-tight mt-0.5">SSO Enabled</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

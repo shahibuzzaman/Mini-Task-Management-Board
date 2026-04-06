@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { InviteSignOutButton } from "@/components/board/invite-sign-out-button";
 import { getBoardPath, getBoardsPath } from "@/features/boards/lib/board-routes";
 import { requestJson } from "@/lib/query/request-json";
+import { useToast } from "@/store/use-toast";
 
 type InviteAcceptanceCardProps = {
   boardName: string;
@@ -17,12 +17,8 @@ type InviteAcceptanceCardProps = {
   status: "pending" | "accepted" | "revoked" | "expired";
   isAuthenticated: boolean;
   signedInEmail: string | null;
+  hasExistingAccount: boolean;
 };
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 export function InviteAcceptanceCard({
   boardName,
@@ -33,9 +29,10 @@ export function InviteAcceptanceCard({
   status,
   isAuthenticated,
   signedInEmail,
+  hasExistingAccount,
 }: InviteAcceptanceCardProps) {
   const router = useRouter();
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const [isPending, setIsPending] = useState(false);
 
   const nextPath = `/invite/${token}`;
@@ -43,7 +40,6 @@ export function InviteAcceptanceCard({
     signedInEmail?.toLowerCase() === invitedEmail.toLowerCase();
 
   async function handleAccept() {
-    setFeedback(null);
     setIsPending(true);
 
     try {
@@ -54,20 +50,16 @@ export function InviteAcceptanceCard({
         },
       );
 
-      setFeedback({
-        kind: "success",
-        message: `Invitation accepted. Redirecting to ${response.boardName}.`,
-      });
+      showToast("success", `Invitation accepted. Redirecting to ${response.boardName}.`);
       router.replace(getBoardPath(response.boardId));
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to accept the invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to accept the invitation.",
+      );
     } finally {
       setIsPending(false);
     }
@@ -91,17 +83,6 @@ export function InviteAcceptanceCard({
         </span>{" "}
         role.
       </p>
-
-      {feedback ? (
-        <div className="mt-5">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       {status === "accepted" ? (
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-6 text-emerald-800">
           This invitation has already been accepted.
@@ -131,15 +112,26 @@ export function InviteAcceptanceCard({
       {status === "pending" && !isAuthenticated ? (
         <div className="mt-6 space-y-3">
           <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700">
-            Sign in or create an account with <span className="font-semibold">{invitedEmail}</span> to accept this invitation.
+            {hasExistingAccount
+              ? <>Sign in with <span className="font-semibold">{invitedEmail}</span> to accept this invitation.</>
+              : <>Create an account with <span className="font-semibold">{invitedEmail}</span> to accept this invitation.</>}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/signin?next=${encodeURIComponent(nextPath)}`}
-              className="rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700"
-            >
-              Continue to sign in
-            </Link>
+            {hasExistingAccount ? (
+              <Link
+                href={`/signin?email=${encodeURIComponent(invitedEmail)}&next=${encodeURIComponent(nextPath)}`}
+                className="rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700"
+              >
+                Continue to sign in
+              </Link>
+            ) : (
+              <Link
+                href={`/signup?email=${encodeURIComponent(invitedEmail)}&next=${encodeURIComponent(nextPath)}`}
+                className="rounded-full bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-700"
+              >
+                Continue to sign up
+              </Link>
+            )}
           </div>
         </div>
       ) : null}

@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
 import {
   canManageBoardLifecycle,
@@ -20,11 +19,7 @@ import type {
   BoardInvitePolicy,
   BoardInviteRole,
 } from "@/types/database";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type BoardSettingsPanelProps = {
   board: BoardSummary;
@@ -48,7 +43,7 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
     board.defaultInviteRole,
   );
   const [targetOwnerId, setTargetOwnerId] = useState("");
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const canEditSettings = canManageBoardSettings(board.currentUserRole);
   const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
 
@@ -62,7 +57,6 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFeedback(null);
 
     try {
       await updateBoardMutation.mutateAsync({
@@ -73,25 +67,19 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         invitePolicy,
         defaultInviteRole,
       });
-      setFeedback({
-        kind: "success",
-        message: "Board settings updated.",
-      });
+      showToast("success", "Board settings updated.");
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to update board settings.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to update board settings.",
+      );
     }
   }
 
   async function handleArchiveToggle() {
-    setFeedback(null);
-
     try {
       await updateBoardMutation.mutateAsync({
         boardId: board.id,
@@ -102,21 +90,18 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
         defaultInviteRole,
         archivedAt: board.archivedAt ? null : new Date().toISOString(),
       });
-      setFeedback({
-        kind: "success",
-        message: board.archivedAt
-          ? "Board unarchived."
-          : "Board archived successfully.",
-      });
+      showToast(
+        "success",
+        board.archivedAt ? "Board unarchived." : "Board archived successfully.",
+      );
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to update board archive state.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to update board archive state.",
+      );
     }
   }
 
@@ -125,26 +110,18 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
       return;
     }
 
-    setFeedback(null);
-
     try {
       await transferOwnershipMutation.mutateAsync({
         boardId: board.id,
         targetUserId: targetOwnerId,
       });
-      setFeedback({
-        kind: "success",
-        message: "Board ownership transferred.",
-      });
+      showToast("success", "Board ownership transferred.");
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to transfer ownership.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to transfer ownership.",
+      );
     }
   }
 
@@ -157,18 +134,16 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
       return;
     }
 
-    setFeedback(null);
-
     try {
       await deleteBoardMutation.mutateAsync(board.id);
+      showToast("success", "Board deleted.");
       router.replace(getBoardsPath());
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to delete the board.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to delete the board.",
+      );
     }
   }
 
@@ -184,17 +159,6 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
             : "Admins can update collaboration settings while owners retain destructive controls."}
         </p>
       </header>
-
-      {feedback ? (
-        <div className="mt-5">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
         <div>
           <label

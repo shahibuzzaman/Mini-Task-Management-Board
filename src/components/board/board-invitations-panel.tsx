@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardInvitationRow } from "@/components/board/board-invitation-row";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { InviteBoardMemberForm } from "@/components/board/invite-board-member-form";
 import { useBoardInvitationsQuery } from "@/features/boards/hooks/use-board-invitations-query";
 import { useCreateBoardInvitationMutation } from "@/features/boards/hooks/use-create-board-invitation-mutation";
@@ -16,11 +15,7 @@ import {
   canReviewAllInvitations,
 } from "@/features/boards/lib/board-permissions";
 import type { BoardSummary } from "@/features/boards/types/board";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type BoardInvitationsPanelProps = {
   board: BoardSummary;
@@ -35,7 +30,7 @@ export function BoardInvitationsPanel({
   const createInvitationMutation = useCreateBoardInvitationMutation(board.id);
   const updateInvitationMutation = useUpdateBoardInvitationMutation(board.id);
   const removeInvitationMutation = useRemoveBoardInvitationMutation(board.id);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const canAccessInvitations = canInviteToBoard(board);
   const canReviewInvitations = canReviewAllInvitations(board.currentUserRole);
 
@@ -52,84 +47,60 @@ export function BoardInvitationsPanel({
     email: string;
     role: "admin" | "member";
   }) {
-    setFeedback(null);
-
     try {
       await createInvitationMutation.mutateAsync(input);
-      setFeedback({
-        kind: "success",
-        message: "Invitation email sent.",
-      });
+      showToast("success", "Invitation email sent.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to send invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to send invitation.",
+      );
       throw error;
     }
   }
 
   async function handleRoleChange(invitationId: string, role: "admin" | "member") {
-    setFeedback(null);
-
     try {
       await updateInvitationMutation.mutateAsync({ invitationId, role });
-      setFeedback({
-        kind: "success",
-        message: "Invitation role updated.",
-      });
+      showToast("success", "Invitation role updated.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to update invitation role.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to update invitation role.",
+      );
     }
   }
 
   async function handleResend(invitationId: string) {
-    setFeedback(null);
-
     try {
       await updateInvitationMutation.mutateAsync({
         invitationId,
         action: "resend",
       });
-      setFeedback({
-        kind: "success",
-        message: "Invitation email resent.",
-      });
+      showToast("success", "Invitation email resent.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to resend invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to resend invitation.",
+      );
     }
   }
 
   async function handleRevoke(invitationId: string) {
-    setFeedback(null);
-
     try {
       await removeInvitationMutation.mutateAsync(invitationId);
-      setFeedback({
-        kind: "success",
-        message: "Invitation revoked.",
-      });
+      showToast("success", "Invitation revoked.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to revoke invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to revoke invitation.",
+      );
     }
   }
 
@@ -145,17 +116,6 @@ export function BoardInvitationsPanel({
             : "Send invite emails and track the invitations you created."}
         </p>
       </header>
-
-      {feedback ? (
-        <div className="mt-5">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       <div className="mt-5">
         <InviteBoardMemberForm
           isPending={createInvitationMutation.isPending}

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { BoardTabs } from "@/components/board/board-tabs";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useAddBoardMemberMutation } from "@/features/boards/hooks/use-add-board-member-mutation";
 import { useBoardInvitationsQuery } from "@/features/boards/hooks/use-board-invitations-query";
 import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
@@ -21,16 +20,12 @@ import type { AuthViewer } from "@/features/auth/types/viewer";
 import type { BoardSummary } from "@/features/boards/types/board";
 import type { BoardInvitation } from "@/features/boards/types/board-invitation";
 import type { BoardRole } from "@/types/database";
+import { useToast } from "@/store/use-toast";
 
 type BoardMembersPageProps = {
   board: BoardSummary;
   viewer: AuthViewer;
 };
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
   const membersQuery = useBoardMembersQuery(board.id);
@@ -44,7 +39,7 @@ export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
   const createInvitationMutation = useCreateBoardInvitationMutation(board.id);
   const updateInvitationMutation = useUpdateBoardInvitationMutation(board.id);
   const removeInvitationMutation = useRemoveBoardInvitationMutation(board.id);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">(
     board.defaultInviteRole,
@@ -65,7 +60,6 @@ export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
 
   async function handleInviteSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFeedback(null);
 
     if (!canInviteMembers || inviteEmail.trim().length === 0) {
       return;
@@ -78,118 +72,81 @@ export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
       });
       setInviteEmail("");
       setInviteRole(board.defaultInviteRole);
-      setFeedback({
-        kind: "success",
-        message: "Invitation sent.",
-      });
+      showToast("success", "Invitation sent.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to send invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to send invitation.",
+      );
     }
   }
 
   async function handleRoleChange(userId: string, role: BoardRole) {
-    setFeedback(null);
-
     try {
       await updateMemberMutation.mutateAsync({ userId, role });
-      setFeedback({
-        kind: "success",
-        message: "Member role updated.",
-      });
+      showToast("success", "Member role updated.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to update member role.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to update member role.",
+      );
     }
   }
 
   async function handleRemoveMember(userId: string) {
-    setFeedback(null);
-
     try {
       await removeMemberMutation.mutateAsync(userId);
-      setFeedback({
-        kind: "success",
-        message: "Member removed.",
-      });
+      showToast("success", "Member removed.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to remove member.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to remove member.",
+      );
     }
   }
 
   async function handleResendInvitation(invitationId: string) {
-    setFeedback(null);
-
     try {
       await updateInvitationMutation.mutateAsync({
         invitationId,
         action: "resend",
       });
-      setFeedback({
-        kind: "success",
-        message: "Invitation resent.",
-      });
+      showToast("success", "Invitation resent.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to resend invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to resend invitation.",
+      );
     }
   }
 
   async function handleRevokeInvitation(invitationId: string) {
-    setFeedback(null);
-
     try {
       await removeInvitationMutation.mutateAsync(invitationId);
-      setFeedback({
-        kind: "success",
-        message: "Invitation revoked.",
-      });
+      showToast("success", "Invitation revoked.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to revoke invitation.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to revoke invitation.",
+      );
     }
   }
 
   async function handleCopyInviteLink(token: string) {
     const inviteUrl = `${window.location.origin}/invite/${token}`;
     await navigator.clipboard.writeText(inviteUrl);
-    setFeedback({
-      kind: "success",
-      message: "Invite link copied.",
-    });
+    showToast("success", "Invite link copied.");
   }
 
   async function handleAddDirectMember(email: string) {
-    setFeedback(null);
-
     try {
       await addMemberMutation.mutateAsync({ email });
-      setFeedback({
-        kind: "success",
-        message: "Member added directly.",
-      });
+      showToast("success", "Member added directly.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to add member.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to add member.",
+      );
     }
   }
 
@@ -207,17 +164,6 @@ export function BoardMembersPage({ board, viewer }: BoardMembersPageProps) {
       <div className="mt-8">
         <BoardTabs boardId={board.id} activeTab="members" />
       </div>
-
-      {feedback ? (
-        <div className="mt-6">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       <div className="mt-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 p-6">
           <form

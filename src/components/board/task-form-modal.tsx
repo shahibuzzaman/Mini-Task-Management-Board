@@ -5,7 +5,6 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import {
   formatTaskAttachmentSize,
@@ -30,6 +29,7 @@ import type {
   TaskMutationInput,
 } from "@/features/tasks/types/task-form";
 import type { BoardMember } from "@/features/boards/types/board-member";
+import { useToast } from "@/store/use-toast";
 
 type TaskFormModalProps = {
   boardId: string;
@@ -43,11 +43,6 @@ type TaskFormModalProps = {
   onClose: () => void;
   onSubmit: (values: TaskMutationInput) => Promise<void>;
 };
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 const DEFAULT_VALUES: TaskEditorValues = {
   title: "",
@@ -103,7 +98,7 @@ export function TaskFormModal({
 
   const [commentBody, setCommentBody] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const initialValues = useMemo(
     () => getInitialValues(task, initialStatus),
     [initialStatus, task],
@@ -160,21 +155,15 @@ export function TaskFormModal({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await createCommentMutation.mutateAsync(commentBody.trim());
       setCommentBody("");
-      setFeedback({
-        kind: "success",
-        message: "Comment added.",
-      });
+      showToast("success", "Comment added.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to add the comment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to add the comment.",
+      );
     }
   }
 
@@ -183,23 +172,17 @@ export function TaskFormModal({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await uploadAttachmentMutation.mutateAsync(selectedFile);
       setSelectedFile(null);
-      setFeedback({
-        kind: "success",
-        message: "Attachment uploaded.",
-      });
+      showToast("success", "Attachment uploaded.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to upload the attachment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to upload the attachment.",
+      );
     }
   }
 
@@ -208,22 +191,16 @@ export function TaskFormModal({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await deleteAttachmentMutation.mutateAsync(attachmentIdToRemove);
-      setFeedback({
-        kind: "success",
-        message: "Attachment removed.",
-      });
+      showToast("success", "Attachment removed.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to remove the attachment.",
-      });
+      showToast(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the attachment.",
+      );
     }
   }
 
@@ -258,16 +235,6 @@ export function TaskFormModal({
             Close
           </button>
         </div>
-
-        {feedback ? (
-          <div className="mt-5">
-            <FeedbackNotice
-              kind={feedback.kind}
-              message={feedback.message}
-              onDismiss={() => setFeedback(null)}
-            />
-          </div>
-        ) : null}
 
         <form
           className="mt-6 space-y-5"

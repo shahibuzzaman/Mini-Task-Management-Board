@@ -1,29 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { CreateBoardForm } from "@/components/board/create-board-form";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { useCreateBoardMutation } from "@/features/boards/hooks/use-create-board-mutation";
 import { getBoardPath } from "@/features/boards/lib/board-routes";
 import type { CreateBoardInput } from "@/features/boards/api/create-board";
+import { useToast } from "@/store/use-toast";
 import { useUIStore } from "@/store/ui-store-provider";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
 
 export function CreateBoardModal() {
   const router = useRouter();
   const isOpen = useUIStore((state) => state.isCreateBoardModalOpen);
   const closeCreateBoardModal = useUIStore((state) => state.closeCreateBoardModal);
   const createBoardMutation = useCreateBoardMutation();
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
 
   const handleClose = useCallback(() => {
-    setFeedback(null);
     closeCreateBoardModal();
   }, [closeCreateBoardModal]);
 
@@ -54,19 +48,17 @@ export function CreateBoardModal() {
   }
 
   async function handleSubmit(values: CreateBoardInput) {
-    setFeedback(null);
-
     try {
       const board = await createBoardMutation.mutateAsync(values);
       handleClose();
+      showToast("success", "Board created successfully.");
       router.replace(getBoardPath(board.id));
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to create the board.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to create the board.",
+      );
       throw error;
     }
   }
@@ -102,16 +94,6 @@ export function CreateBoardModal() {
           <p className="text-[14px] text-slate-500 font-medium mb-8 pr-12 leading-relaxed">
             Design a new architectural space for your team&apos;s workflow and high-priority tasks.
           </p>
-
-          {feedback ? (
-            <div className="mb-6 -mt-2">
-              <FeedbackNotice
-                kind={feedback.kind}
-                message={feedback.message}
-                onDismiss={() => setFeedback(null)}
-              />
-            </div>
-          ) : null}
 
           <CreateBoardForm
             isPending={createBoardMutation.isPending}

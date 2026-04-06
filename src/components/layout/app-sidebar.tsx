@@ -1,20 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { CreateBoardModal } from "@/components/board/create-board-modal";
+import type { AuthViewer } from "@/features/auth/types/viewer";
 import { getBoardPath } from "@/features/boards/lib/board-routes";
 import { useBoardsQuery } from "@/features/boards/hooks/use-boards-query";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useUIStore } from "@/store/ui-store-provider";
 
-export function AppSidebar() {
+export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
   const pathname = usePathname();
+  const router = useRouter();
   const pathnameParts = pathname.split("/").filter(Boolean);
   const activeBoardId =
     pathnameParts[0] === "boards" && pathnameParts[1] ? pathnameParts[1] : null;
   const boardsQuery = useBoardsQuery([]);
   const boards = boardsQuery.data ?? [];
   const openCreateBoardModal = useUIStore((state) => state.openCreateBoardModal);
+
+  async function handleSignOut() {
+    const supabase = getSupabaseBrowserClient();
+
+    if (!supabase) {
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.replace("/signin");
+    router.refresh();
+  }
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: DashboardIcon },
@@ -60,16 +75,30 @@ export function AppSidebar() {
 
           return (
             <div key={item.name}>
-              <div
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
-                  isActive
-                    ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
-                    : "text-slate-600"
-                }`}
-              >
-                <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
-                {item.name}
-              </div>
+              {item.href ? (
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
+                    isActive
+                      ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
+                  {item.name}
+                </Link>
+              ) : (
+                <div
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${
+                    isActive
+                      ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
+                      : "text-slate-600"
+                  }`}
+                >
+                  <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
+                  {item.name}
+                </div>
+              )}
 
               {item.name === "Boards" ? (
                 <div className="mt-2 ml-4 border-l border-slate-200 pl-3">
@@ -115,9 +144,21 @@ export function AppSidebar() {
              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full"><path d="M18 17a6 6 0 100-12 6 6 0 000 12zM9 25a9 9 0 0118 0" fill="#94a3b8"/></svg>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[13px] font-bold text-slate-900 truncate">Architech Studio</h3>
-            <p className="text-[11px] font-semibold text-slate-500 truncate">Free Plan</p>
+            <h3 className="text-[13px] font-bold text-slate-900 truncate">{viewer.displayName}</h3>
+            <p className="text-[11px] font-semibold text-slate-500 truncate">{viewer.email}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            aria-label="Log out"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="M16 17l5-5-5-5" />
+              <path d="M21 12H9" />
+            </svg>
+          </button>
         </div>
       </div>
       <CreateBoardModal />

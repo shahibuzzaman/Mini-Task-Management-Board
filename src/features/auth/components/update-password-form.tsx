@@ -2,18 +2,18 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   updatePasswordSchema,
   type UpdatePasswordSchema,
 } from "@/features/auth/lib/auth-form-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AuthField, AuthFeedback } from "./auth-fields";
+import { useToast } from "@/store/use-toast";
+import { AuthField, PasswordInput } from "./auth-fields";
 
 export function UpdatePasswordForm() {
   const router = useRouter();
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const showToast = useToast();
   const supabase = getSupabaseBrowserClient();
   
   const updateForm = useForm<UpdatePasswordSchema>({
@@ -24,9 +24,8 @@ export function UpdatePasswordForm() {
   const isPending = updateForm.formState.isSubmitting;
 
   async function handleUpdate(values: UpdatePasswordSchema) {
-    setFeedback(null);
     if (!supabase) {
-      setFeedback({ kind: "error", message: "Supabase is not configured." });
+      showToast("error", "Supabase is not configured.");
       return;
     }
 
@@ -35,10 +34,11 @@ export function UpdatePasswordForm() {
     });
 
     if (error) {
-      setFeedback({ kind: "error", message: error.message });
+      showToast("error", error.message);
       return;
     }
 
+    showToast("success", "Password updated successfully.");
     router.replace("/dashboard");
     router.refresh();
   }
@@ -66,19 +66,16 @@ export function UpdatePasswordForm() {
           <div className="space-y-4">
             <AuthField label="NEW PASSWORD" error={updateForm.formState.errors.password?.message}>
               <div className="relative">
-                <input
-                  type="password"
+                <PasswordInput
                   placeholder="••••••••"
                   autoComplete="new-password"
                   className="mt-1.5 w-full rounded-xl bg-surface-container-low px-4 py-[14px] text-[15px] text-on-surface placeholder:text-on-surface-variant/40 outline-none transition border border-transparent focus:bg-surface-container-lowest focus:border-primary focus:shadow-sm placeholder:tracking-[0.2em]"
                   {...updateForm.register("password")}
                 />
-                <p className="mt-2.5 text-[11px] text-on-surface-variant italic font-medium">Must be at least 8 characters long.</p>
+                <p className="mt-2.5 text-[11px] text-on-surface-variant italic font-medium">Must be at least 8 characters with 1 symbol.</p>
               </div>
             </AuthField>
           </div>
-
-          {feedback && <AuthFeedback {...feedback} />}
 
           <button
             type="submit"

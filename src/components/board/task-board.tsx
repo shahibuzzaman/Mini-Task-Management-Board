@@ -16,7 +16,6 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
 import { BoardColumn } from "@/components/board/board-column";
 import { BoardErrorState } from "@/components/board/board-error-state";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { BoardLoadingState } from "@/components/board/board-loading-state";
 import { TaskCard } from "@/components/board/task-card";
 import type { AuthViewer } from "@/features/auth/types/viewer";
@@ -28,11 +27,7 @@ import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
 import { groupTasksByStatus } from "@/features/tasks/lib/group-tasks-by-status";
 import { projectDraggedTasks } from "@/features/tasks/lib/project-dragged-tasks";
 import type { Task } from "@/features/tasks/types/task";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type TaskBoardProps = {
   board: BoardSummary;
@@ -53,7 +48,7 @@ export function TaskBoard({
   const isReadOnly = board.archivedAt !== null;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectedTasks, setProjectedTasks] = useState<Task[] | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -165,20 +160,15 @@ export function TaskBoard({
     }
 
     moveTaskMutation.reset();
-    setFeedback(null);
 
     try {
       await moveTaskMutation.mutateAsync(movePayload);
-      setFeedback({
-        kind: "success",
-        message: "Task position updated.",
-      });
+      showToast("success", "Task position updated.");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to move the task.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to move the task.",
+      );
     }
   }
 
@@ -203,15 +193,6 @@ export function TaskBoard({
             drag actions are disabled until an owner unarchives it.
           </div>
         ) : null}
-
-        {feedback ? (
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        ) : null}
-
         <div className="grid gap-6 xl:grid-cols-3">
           {TASK_COLUMNS.map((column) => (
             <BoardColumn

@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BoardTabs } from "@/components/board/board-tabs";
-import { FeedbackNotice } from "@/components/board/feedback-notice";
 import { getBoardsPath } from "@/features/boards/lib/board-routes";
 import {
   canManageBoardLifecycle,
@@ -17,11 +16,7 @@ import type {
   BoardInvitePolicy,
   BoardInviteRole,
 } from "@/types/database";
-
-type FeedbackState = {
-  kind: "success" | "error";
-  message: string;
-} | null;
+import { useToast } from "@/store/use-toast";
 
 type BoardDetailsPageProps = {
   board: BoardSummary;
@@ -61,7 +56,7 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
   const deleteBoardMutation = useDeleteBoardMutation();
   const canEditSettings = canManageBoardSettings(board.currentUserRole);
   const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const showToast = useToast();
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description);
   const [accentColor, setAccentColor] = useState<BoardAccentColor>(board.accentColor);
@@ -91,8 +86,6 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
   );
 
   async function handleSave() {
-    setFeedback(null);
-
     try {
       await updateBoardMutation.mutateAsync({
         boardId: board.id,
@@ -102,22 +95,17 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
         invitePolicy,
         defaultInviteRole,
       });
-      setFeedback({
-        kind: "success",
-        message: "Board settings updated.",
-      });
+      showToast("success", "Board settings updated.");
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to update board settings.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to update board settings.",
+      );
     }
   }
 
   function handleDiscardChanges() {
-    setFeedback(null);
     setName(board.name);
     setDescription(board.description);
     setAccentColor(board.accentColor);
@@ -126,8 +114,6 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
   }
 
   async function handleArchiveToggle() {
-    setFeedback(null);
-
     try {
       await updateBoardMutation.mutateAsync({
         boardId: board.id,
@@ -138,17 +124,16 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
         defaultInviteRole,
         archivedAt: board.archivedAt ? null : new Date().toISOString(),
       });
-      setFeedback({
-        kind: "success",
-        message: board.archivedAt ? "Board unarchived." : "Board archived.",
-      });
+      showToast(
+        "success",
+        board.archivedAt ? "Board unarchived." : "Board archived.",
+      );
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to update archive state.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to update archive state.",
+      );
     }
   }
 
@@ -161,18 +146,16 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
       return;
     }
 
-    setFeedback(null);
-
     try {
       await deleteBoardMutation.mutateAsync(board.id);
+      showToast("success", "Board deleted.");
       router.replace(getBoardsPath());
       router.refresh();
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Unable to delete the board.",
-      });
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to delete the board.",
+      );
     }
   }
 
@@ -190,17 +173,6 @@ export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
       <div className="mt-8">
         <BoardTabs boardId={board.id} activeTab="settings" />
       </div>
-
-      {feedback ? (
-        <div className="mt-6">
-          <FeedbackNotice
-            kind={feedback.kind}
-            message={feedback.message}
-            onDismiss={() => setFeedback(null)}
-          />
-        </div>
-      ) : null}
-
       <div className="mt-10 space-y-14">
         <SettingsSection
           title="General"

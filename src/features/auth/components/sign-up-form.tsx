@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import {
@@ -10,24 +9,30 @@ import {
   type SignUpFormSchema,
 } from "@/features/auth/lib/auth-form-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AuthField, AuthFeedback } from "./auth-fields";
+import { useToast } from "@/store/use-toast";
+import { AuthField, PasswordInput } from "./auth-fields";
 
-export function SignUpForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
+export function SignUpForm({
+  nextPath = "/dashboard",
+  initialEmail = "",
+}: {
+  nextPath?: string;
+  initialEmail?: string;
+}) {
   const router = useRouter();
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const showToast = useToast();
   const supabase = getSupabaseBrowserClient();
   
   const signUpForm = useForm<SignUpFormSchema>({
     resolver: zodResolver(signUpFormSchema),
-    defaultValues: { displayName: "", email: "", password: "" },
+    defaultValues: { displayName: "", email: initialEmail, password: "" },
   });
 
   const isPending = signUpForm.formState.isSubmitting;
 
   async function handleSignUp(values: SignUpFormSchema) {
-    setFeedback(null);
     if (!supabase) {
-      setFeedback({ kind: "error", message: "Supabase is not configured. Add the public URL and anon key first." });
+      showToast("error", "Supabase is not configured. Add the public URL and anon key first.");
       return;
     }
 
@@ -41,7 +46,7 @@ export function SignUpForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
     });
 
     if (error) {
-      setFeedback({ kind: "error", message: error.message });
+      showToast("error", error.message);
       return;
     }
 
@@ -98,14 +103,13 @@ export function SignUpForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
 
             <AuthField label="PASSWORD" error={signUpForm.formState.errors.password?.message}>
               <div className="relative">
-                <input
-                  type="password"
+                <PasswordInput
                   placeholder="••••••••"
                   autoComplete="new-password"
                   className="mt-1.5 w-full rounded-xl bg-surface-container-low px-4 py-[14px] text-[15px] text-on-surface placeholder:text-on-surface-variant/40 outline-none transition border border-transparent focus:bg-surface-container-lowest focus:border-primary focus:shadow-sm placeholder:tracking-[0.2em]"
                   {...signUpForm.register("password")}
                 />
-                <p className="mt-2.5 text-[11px] text-on-surface-variant italic font-medium">Must be at least 12 characters with 1 symbol.</p>
+                <p className="mt-2.5 text-[11px] text-on-surface-variant italic font-medium">Must be at least 8 characters with 1 symbol.</p>
               </div>
             </AuthField>
           </div>
@@ -118,9 +122,6 @@ export function SignUpForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
               I agree to the <a href="#" className="font-bold text-[#3525cd] hover:text-[#4f46e5]">Terms of Service</a> and <a href="#" className="font-bold text-[#3525cd] hover:text-[#4f46e5]">Privacy Policy</a>
             </div>
           </div>
-
-          {feedback && <AuthFeedback {...feedback} />}
-
           <button
             type="submit"
             disabled={isPending}

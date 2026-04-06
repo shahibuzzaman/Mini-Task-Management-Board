@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import {
@@ -10,11 +9,12 @@ import {
   type ForgotPasswordSchema,
 } from "@/features/auth/lib/auth-form-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AuthField, AuthFeedback } from "./auth-fields";
+import { useToast } from "@/store/use-toast";
+import { AuthField } from "./auth-fields";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const showToast = useToast();
   const supabase = getSupabaseBrowserClient();
   
   const forgotForm = useForm<ForgotPasswordSchema>({
@@ -25,9 +25,8 @@ export function ForgotPasswordForm() {
   const isPending = forgotForm.formState.isSubmitting;
 
   async function handleForgot(values: ForgotPasswordSchema) {
-    setFeedback(null);
     if (!supabase) {
-      setFeedback({ kind: "error", message: "Supabase is not configured." });
+      showToast("error", "Supabase is not configured.");
       return;
     }
 
@@ -36,10 +35,11 @@ export function ForgotPasswordForm() {
     });
 
     if (error) {
-      setFeedback({ kind: "error", message: error.message });
+      showToast("error", error.message);
       return;
     }
 
+    showToast("success", "Password reset link sent.");
     router.replace(`/verify-email?email=${encodeURIComponent(values.email)}&next=/signin`);
   }
 
@@ -74,9 +74,6 @@ export function ForgotPasswordForm() {
               />
             </AuthField>
           </div>
-
-          {feedback && <AuthFeedback {...feedback} />}
-
           <button
             type="submit"
             disabled={isPending}
