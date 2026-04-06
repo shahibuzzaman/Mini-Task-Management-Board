@@ -200,8 +200,8 @@ export function TaskFormModal({
     }
   }
 
-  const labelClass = "block text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d] mb-2";
-  const inputClass = "block w-full rounded-xl border border-transparent bg-surface-container-low px-4 py-3.5 text-[14px] text-slate-800 outline-none transition focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary";
+  const labelClass = "mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d]";
+  const inputClass = "block w-full rounded-md border-none bg-white px-4 py-3.5 text-[14.5px] font-medium text-slate-900 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] outline-none transition-shadow placeholder:text-slate-400 focus:ring-2 focus:ring-[#3525cd]/50";
 
   function handleQueueFiles(files: FileList | null) {
     if (!files || files.length === 0) {

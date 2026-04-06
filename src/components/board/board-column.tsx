@@ -8,6 +8,7 @@ import { shouldVirtualizeTaskColumn } from "@/features/tasks/lib/task-virtualiza
 import type { Task, TaskStatus } from "@/features/tasks/types/task";
 
 type BoardColumnProps = {
+  boardId: string;
   title: string;
   status: TaskStatus;
   tasks: Task[];
@@ -16,6 +17,7 @@ type BoardColumnProps = {
 };
 
 function BoardColumnComponent({
+  boardId,
   title,
   status,
   tasks,
@@ -54,7 +56,11 @@ function BoardColumnComponent({
       <BoardColumnDropZone status={status}>
         {tasks.length > 0 ? (
           shouldUseVirtualization ? (
-            <VirtualizedTaskColumnList tasks={tasks} isReadOnly={isReadOnly} />
+            <VirtualizedTaskColumnList
+              boardId={boardId}
+              tasks={tasks}
+              isReadOnly={isReadOnly}
+            />
           ) : (
             <div
               className={
@@ -69,6 +75,7 @@ function BoardColumnComponent({
                   {tasks.map((task) => (
                     <SortableTaskCard
                       key={task.id}
+                      boardId={boardId}
                       task={task}
                       disabled={isReadOnly}
                     />
@@ -112,6 +119,7 @@ function areBoardColumnPropsEqual(
 ) {
   if (
     previousProps.title !== nextProps.title ||
+    previousProps.boardId !== nextProps.boardId ||
     previousProps.status !== nextProps.status ||
     previousProps.isDragging !== nextProps.isDragging ||
     previousProps.isReadOnly !== nextProps.isReadOnly ||

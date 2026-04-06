@@ -50,7 +50,7 @@ export function ForgotPasswordForm() {
           <div className="w-10 h-10 bg-[#3525cd] rounded-[10px] flex items-center justify-center shadow-sm">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
           </div>
-          <span className="text-[22px] font-bold tracking-tight text-on-surface">TaskFlow</span>
+          <span className="text-[22px] font-bold tracking-tight text-on-surface">TaskTrack</span>
         </div>
 
         <div className="text-center mb-8">
