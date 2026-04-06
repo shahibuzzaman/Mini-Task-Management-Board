@@ -6,9 +6,6 @@ TaskTrack is a production-shaped mini task management board built for a take-hom
 
 - Project Link: `Add your deployed app URL here`
 - Design Link: `Add your Figma / design reference URL here`
-- Local App: `http://localhost:3000`
-- Demo Script: [docs/demo-script.md](/Users/mac/Desktop/mini-task-management-board/docs/demo-script.md)
-- Release Checklist: [docs/release-checklist.md](/Users/mac/Desktop/mini-task-management-board/docs/release-checklist.md)
 
 ## What This Project Includes
 
@@ -200,6 +197,63 @@ Reference file:
 
 - [.env.example](/Users/mac/Desktop/mini-task-management-board/.env.example)
 
+## Google OAuth Setup
+
+If you want Google sign-in/sign-up in addition to email/password auth, configure both Google Cloud and Supabase.
+
+### 1. Create a Google OAuth client
+
+In Google Cloud Console:
+
+1. Create or select a project
+2. Configure the OAuth consent screen
+3. Create an OAuth client with application type `Web application`
+
+Add these local development values:
+
+- Authorized JavaScript origin:
+  - `http://localhost:3000`
+- Authorized redirect URI:
+  - `https://aljhbfoywjmmugpfbvfd.supabase.co/auth/v1/callback`
+
+For production, also add your deployed app origin and keep the Supabase callback URI that belongs to the production Supabase project.
+
+### 2. Enable Google in Supabase
+
+In Supabase Dashboard:
+
+1. Open `Authentication -> Providers -> Google`
+2. Enable the Google provider
+3. Paste the Google OAuth `Client ID`
+4. Paste the Google OAuth `Client Secret`
+
+### 3. Configure Supabase redirect URLs
+
+In Supabase Dashboard under `Authentication -> URL Configuration`:
+
+- Set `Site URL` to:
+  - `http://localhost:3000`
+- Add this redirect URL:
+  - `http://localhost:3000/auth/callback`
+
+If you deploy the app, also add your production callback URL, for example:
+
+- `https://your-app-domain.com/auth/callback`
+
+### 4. App behavior
+
+This repository already includes Google OAuth buttons in the auth forms and routes Google auth through:
+
+- [`src/features/auth/components/sign-in-form.tsx`](/Users/mac/Desktop/mini-task-management-board/src/features/auth/components/sign-in-form.tsx)
+- [`src/features/auth/components/sign-up-form.tsx`](/Users/mac/Desktop/mini-task-management-board/src/features/auth/components/sign-up-form.tsx)
+- [`src/app/auth/callback/route.ts`](/Users/mac/Desktop/mini-task-management-board/src/app/auth/callback/route.ts)
+
+The browser redirects to your app callback route:
+
+- `http://localhost:3000/auth/callback`
+
+Supabase exchanges the Google auth code and then redirects the user into the app.
+
 ## Local Setup
 
 ### 1. Install dependencies
@@ -287,26 +341,9 @@ For the demo, emphasize:
 - optimistic updates and realtime sync
 - board-scoped collaboration rather than shallow feature breadth
 
-Use [docs/demo-script.md](/Users/mac/Desktop/mini-task-management-board/docs/demo-script.md) as the presentation script.
-
 ## Trade-Offs
 
 - No full organization admin layer
 - No authentication providers beyond email/password
 - Delete was added for tasks because it is a small, high-value extension of the existing task lifecycle
 - The implementation prioritizes a coherent, explainable product slice over broad feature coverage
-
-## Submission Notes
-
-Before submission, update:
-
-- `Project Link`
-- `Design Link`
-- any demo video or recording link you want to include
-
-If you want, I can also add a polished “Submission” section with placeholders for:
-
-- live URL
-- GitHub repo URL
-- Figma URL
-- Loom/demo video URL
