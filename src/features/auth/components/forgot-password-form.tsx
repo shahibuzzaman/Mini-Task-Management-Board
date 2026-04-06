@@ -8,6 +8,7 @@ import {
   forgotPasswordSchema,
   type ForgotPasswordSchema,
 } from "@/features/auth/lib/auth-form-schema";
+import { getAuthCallbackUrl } from "@/features/auth/lib/auth-redirect-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useToast } from "@/store/use-toast";
 import { AuthField } from "./auth-fields";
@@ -31,7 +32,7 @@ export function ForgotPasswordForm() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/update-password")}`,
+      redirectTo: getAuthCallbackUrl("/update-password"),
     });
 
     if (error) {

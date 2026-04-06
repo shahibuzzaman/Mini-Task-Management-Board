@@ -9,6 +9,7 @@ import {
   loginFormSchema,
   type LoginFormSchema,
 } from "@/features/auth/lib/auth-form-schema";
+import { getAuthCallbackUrl } from "@/features/auth/lib/auth-redirect-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useToast } from "@/store/use-toast";
 import { AuthField, GoogleAuthButton, PasswordInput } from "./auth-fields";
@@ -63,7 +64,7 @@ export function SignInForm({
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback${nextPath && nextPath !== "/dashboard" ? `?next=${encodeURIComponent(nextPath)}` : ""}`,
+        redirectTo: getAuthCallbackUrl(nextPath),
       },
     });
 
