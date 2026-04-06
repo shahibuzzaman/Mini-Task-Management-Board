@@ -52,6 +52,17 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
     return pathnameParts[0] === "boards";
   }
 
+  function handleBoardsNavigation() {
+    closeMobileSidebar();
+
+    if (boards.length > 0) {
+      router.push(getBoardPath(boards[0].id));
+      return;
+    }
+
+    openCreateBoardModal();
+  }
+
   return (
     <>
       <div
@@ -121,6 +132,19 @@ export function AppSidebar({ viewer }: { viewer: AuthViewer }) {
                   <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
                   {item.name}
                 </Link>
+              ) : item.name === "Boards" ? (
+                <button
+                  type="button"
+                  onClick={handleBoardsNavigation}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-left text-[14px] font-semibold transition-colors ${
+                    isActive
+                      ? "bg-white text-[#3525cd] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#f1f5f9]"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-[#3525cd]" : "text-slate-400"}`} />
+                  {item.name}
+                </button>
               ) : (
                 <div
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-semibold transition-colors ${

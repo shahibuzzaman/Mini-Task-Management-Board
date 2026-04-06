@@ -48,8 +48,13 @@ export function BoardInvitationsPanel({
     role: "admin" | "member";
   }) {
     try {
-      await createInvitationMutation.mutateAsync(input);
-      showToast("success", "Invitation email sent.");
+      const result = await createInvitationMutation.mutateAsync(input);
+      showToast(
+        "success",
+        result.type === "member_added"
+          ? "Registered user added directly to the board."
+          : "Invitation email sent.",
+      );
     } catch (error) {
       showToast(
         "error",

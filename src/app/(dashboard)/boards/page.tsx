@@ -1,8 +1,5 @@
 import { redirect } from "next/navigation";
-import { BoardWorkspacePage } from "@/components/board/board-workspace-page";
 import { SupabaseSetupNotice } from "@/components/board/supabase-setup-notice";
-import { getBoardPath } from "@/features/boards/lib/board-routes";
-import { getBoardShellData } from "@/features/boards/lib/get-board-shell-data";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/env";
 
 export default async function BoardsPage() {
@@ -19,18 +16,5 @@ export default async function BoardsPage() {
     );
   }
 
-  const { viewer, boards, board, redirectBoardId } = await getBoardShellData();
-
-  if (redirectBoardId) {
-    redirect(getBoardPath(redirectBoardId));
-  }
-
-  return (
-    <BoardWorkspacePage
-      viewer={viewer}
-      boards={boards}
-      board={board}
-      section="board"
-    />
-  );
+  redirect("/dashboard");
 }
