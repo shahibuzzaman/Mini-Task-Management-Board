@@ -21,40 +21,24 @@ export function useTasksRealtimeSync(boardId: string) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "tasks",
-          filter: `board_id=eq.${boardId}`,
         },
-        () => {
-          void queryClient.invalidateQueries({
-            queryKey: tasksQueryKeys.list(boardId),
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "tasks",
-          filter: `board_id=eq.${boardId}`,
-        },
-        () => {
-          void queryClient.invalidateQueries({
-            queryKey: tasksQueryKeys.list(boardId),
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "tasks",
-          filter: `board_id=eq.${boardId}`,
-        },
-        () => {
+        (payload) => {
+          const row =
+            payload.eventType === "DELETE"
+              ? payload.old
+              : payload.new;
+          const payloadBoardId =
+            row && typeof row === "object" && "board_id" in row
+              ? String(row.board_id ?? "")
+              : "";
+
+          if (payloadBoardId !== boardId) {
+            return;
+          }
+
           void queryClient.invalidateQueries({
             queryKey: tasksQueryKeys.list(boardId),
           });
