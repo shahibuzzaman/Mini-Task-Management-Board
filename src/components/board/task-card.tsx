@@ -31,6 +31,7 @@ function TaskCardComponent({
   const showToast = useToast();
   const footerMeta = getTaskFooterMeta(task);
   const leftBorderColorClass = getTaskAccentBorderClass(task);
+  const avatarLabel = task.assigneeName ?? task.updatedByName ?? "Unassigned";
 
   function handleOpenDeleteModal(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -142,8 +143,12 @@ function TaskCardComponent({
             {footerMeta.icon}
             {footerMeta.label}
           </span>
-          <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold text-surface-container-lowest shadow-sm ring-2 ring-surface-container-lowest">
-            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(task.assigneeName ?? task.updatedByName ?? "U")}&background=random&color=fff&size=64`} alt="Avatar" className="h-full w-full object-cover" />
+          <span
+            aria-label={avatarLabel}
+            title={avatarLabel}
+            className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold uppercase text-surface-container-lowest shadow-sm ring-2 ring-surface-container-lowest"
+          >
+            {getAvatarInitials(avatarLabel)}
           </span>
         </div>
       </article>
@@ -360,7 +365,23 @@ function dueAtLabelAvailable(dueAt: string | null) {
   return label ? `${label}` : null;
 }
 
+function getAvatarInitials(name: string): string {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (parts.length === 0) {
+    return "U";
+  }
+
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
 function getVisibleTaskId(taskId: string): string {
+  // UUID-backed tasks are noisy in the UI. Showing the trailing segment keeps
+  // the label stable for humans without pretending it is a canonical short id.
   if (taskId.split("-")[0] === taskId) {
     return taskId.slice(0, 8).toUpperCase();
   }
