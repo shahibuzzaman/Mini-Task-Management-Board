@@ -7,11 +7,13 @@ import { TaskCard } from "@/components/board/task-card";
 import type { Task } from "@/features/tasks/types/task";
 
 type SortableTaskCardProps = {
+  boardId: string;
   task: Task;
   disabled?: boolean;
 };
 
 function SortableTaskCardComponent({
+  boardId,
   task,
   disabled = false,
 }: SortableTaskCardProps) {
@@ -36,6 +38,7 @@ function SortableTaskCardComponent({
       className={isDragging ? "opacity-40" : ""}
     >
       <TaskCard
+        boardId={boardId}
         task={task}
         isReadOnly={disabled}
         cardDragProps={{

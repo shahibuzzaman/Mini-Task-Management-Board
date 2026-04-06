@@ -11,11 +11,13 @@ import {
 import type { Task } from "@/features/tasks/types/task";
 
 type VirtualizedTaskColumnListProps = {
+  boardId: string;
   tasks: Task[];
   isReadOnly?: boolean;
 };
 
 export function VirtualizedTaskColumnList({
+  boardId,
   tasks,
   isReadOnly = false,
 }: VirtualizedTaskColumnListProps) {
@@ -59,7 +61,11 @@ export function VirtualizedTaskColumnList({
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                <SortableTaskCard task={task} disabled={isReadOnly} />
+                <SortableTaskCard
+                  boardId={boardId}
+                  task={task}
+                  disabled={isReadOnly}
+                />
               </div>
             );
           })}

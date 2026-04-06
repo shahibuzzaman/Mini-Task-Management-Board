@@ -1,152 +1,49 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { BoardTransferOwnershipLoadingState } from "@/components/board/board-loading-state";
-import { useBoardMembersQuery } from "@/features/boards/hooks/use-board-members-query";
-import {
-  canDeleteBoard,
-  canManageBoardLifecycle,
-  canManageBoardSettings,
-} from "@/features/boards/lib/board-permissions";
-import { useDeleteBoardMutation } from "@/features/boards/hooks/use-delete-board-mutation";
-import { useTransferBoardOwnershipMutation } from "@/features/boards/hooks/use-transfer-board-ownership-mutation";
-import { useUpdateBoardMutation } from "@/features/boards/hooks/use-update-board-mutation";
-import { getBoardsPath } from "@/features/boards/lib/board-routes";
+import { useBoardSettingsController } from "@/features/boards/hooks/use-board-settings-controller";
 import type { BoardSummary } from "@/features/boards/types/board";
 import type {
   BoardAccentColor,
   BoardInvitePolicy,
   BoardInviteRole,
 } from "@/types/database";
-import { useToast } from "@/store/use-toast";
 
 type BoardSettingsPanelProps = {
   board: BoardSummary;
 };
 
 export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
-  const router = useRouter();
-  const membersQuery = useBoardMembersQuery(board.id);
-  const updateBoardMutation = useUpdateBoardMutation();
-  const transferOwnershipMutation = useTransferBoardOwnershipMutation();
-  const deleteBoardMutation = useDeleteBoardMutation();
-  const [name, setName] = useState(board.name);
-  const [description, setDescription] = useState(board.description);
-  const [accentColor, setAccentColor] = useState<BoardAccentColor>(
-    board.accentColor,
-  );
-  const [invitePolicy, setInvitePolicy] = useState<BoardInvitePolicy>(
-    board.invitePolicy,
-  );
-  const [defaultInviteRole, setDefaultInviteRole] = useState<BoardInviteRole>(
-    board.defaultInviteRole,
-  );
-  const [targetOwnerId, setTargetOwnerId] = useState("");
-  const showToast = useToast();
-  const canEditSettings = canManageBoardSettings(board.currentUserRole);
-  const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
-  const canRemoveBoard = canDeleteBoard(board.currentUserRole);
+  const {
+    accentColor,
+    canEditSettings,
+    canManageLifecycle,
+    canRemoveBoard,
+    defaultInviteRole,
+    deleteBoardMutation,
+    description,
+    handleArchiveToggle,
+    handleDeleteBoard,
+    handleSave,
+    handleTransferOwnership,
+    invitePolicy,
+    membersQuery,
+    name,
+    setAccentColor,
+    setDefaultInviteRole,
+    setDescription,
+    setInvitePolicy,
+    setName,
+    setTargetOwnerId,
+    targetOwnerId,
+    transferOwnershipMutation,
+    transferableMembers,
+    updateBoardMutation,
+  } = useBoardSettingsController(board);
 
   if (!canEditSettings) {
     return null;
-  }
-
-  const transferableMembers = (membersQuery.data ?? []).filter(
-    (member) => !member.isCurrentUser,
-  );
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    try {
-      await updateBoardMutation.mutateAsync({
-        boardId: board.id,
-        name,
-        description,
-        accentColor,
-        invitePolicy,
-        defaultInviteRole,
-      });
-      showToast("success", "Board settings updated.");
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Unable to update board settings.",
-      );
-    }
-  }
-
-  async function handleArchiveToggle() {
-    try {
-      await updateBoardMutation.mutateAsync({
-        boardId: board.id,
-        name,
-        description,
-        accentColor,
-        invitePolicy,
-        defaultInviteRole,
-        archivedAt: board.archivedAt ? null : new Date().toISOString(),
-      });
-      showToast(
-        "success",
-        board.archivedAt ? "Board unarchived." : "Board archived successfully.",
-      );
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : "Unable to update board archive state.",
-      );
-    }
-  }
-
-  async function handleTransferOwnership() {
-    if (targetOwnerId.length === 0) {
-      return;
-    }
-
-    try {
-      await transferOwnershipMutation.mutateAsync({
-        boardId: board.id,
-        targetUserId: targetOwnerId,
-      });
-      showToast("success", "Board ownership transferred.");
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to transfer ownership.",
-      );
-    }
-  }
-
-  async function handleDeleteBoard() {
-    const confirmed = window.confirm(
-      "Delete this board? This will permanently remove its tasks, members, and invitations.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteBoardMutation.mutateAsync(board.id);
-      showToast("success", "Board deleted.");
-      router.replace(getBoardsPath());
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to delete the board.",
-      );
-    }
   }
 
   const labelClass = "block text-[11px] font-bold uppercase tracking-[0.12em] text-[#5e718d] mb-2";
@@ -164,7 +61,13 @@ export function BoardSettingsPanel({ board }: BoardSettingsPanelProps) {
             : "Admins can update collaboration settings while owners retain destructive controls."}
         </p>
       </header>
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+      <form
+        className="mt-8 space-y-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSave();
+        }}
+      >
         <div>
           <label
             htmlFor={`board-settings-name-${board.id}`}

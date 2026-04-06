@@ -1,24 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { BoardTabs } from "@/components/board/board-tabs";
-import { getBoardsPath } from "@/features/boards/lib/board-routes";
-import {
-  canDeleteBoard,
-  canManageBoardLifecycle,
-  canManageBoardSettings,
-} from "@/features/boards/lib/board-permissions";
-import { useDeleteBoardMutation } from "@/features/boards/hooks/use-delete-board-mutation";
-import { useSetBoardPinMutation } from "@/features/boards/hooks/use-set-board-pin-mutation";
-import { useUpdateBoardMutation } from "@/features/boards/hooks/use-update-board-mutation";
+import { useBoardSettingsController } from "@/features/boards/hooks/use-board-settings-controller";
 import type { BoardSummary } from "@/features/boards/types/board";
 import type {
   BoardAccentColor,
   BoardInvitePolicy,
   BoardInviteRole,
 } from "@/types/database";
-import { useToast } from "@/store/use-toast";
 
 type BoardDetailsPageProps = {
   board: BoardSummary;
@@ -53,134 +42,30 @@ const DEFAULT_ROLE_OPTIONS: Array<{
 ];
 
 export function BoardDetailsPage({ board }: BoardDetailsPageProps) {
-  const router = useRouter();
-  const updateBoardMutation = useUpdateBoardMutation();
-  const setBoardPinMutation = useSetBoardPinMutation();
-  const deleteBoardMutation = useDeleteBoardMutation();
-  const canEditSettings = canManageBoardSettings(board.currentUserRole);
-  const canManageLifecycle = canManageBoardLifecycle(board.currentUserRole);
-  const canRemoveBoard = canDeleteBoard(board.currentUserRole);
-  const showToast = useToast();
-  const [name, setName] = useState(board.name);
-  const [description, setDescription] = useState(board.description);
-  const [accentColor, setAccentColor] = useState<BoardAccentColor>(board.accentColor);
-  const [invitePolicy, setInvitePolicy] = useState<BoardInvitePolicy>(board.invitePolicy);
-  const [defaultInviteRole, setDefaultInviteRole] =
-    useState<BoardInviteRole>(board.defaultInviteRole);
-
-  const hasChanges = useMemo(
-    () =>
-      name.trim() !== board.name ||
-      description.trim() !== board.description ||
-      accentColor !== board.accentColor ||
-      invitePolicy !== board.invitePolicy ||
-      defaultInviteRole !== board.defaultInviteRole,
-    [
-      accentColor,
-      board.accentColor,
-      board.defaultInviteRole,
-      board.description,
-      board.invitePolicy,
-      board.name,
-      defaultInviteRole,
-      description,
-      invitePolicy,
-      name,
-    ],
-  );
-
-  async function handleSave() {
-    try {
-      await updateBoardMutation.mutateAsync({
-        boardId: board.id,
-        name: name.trim(),
-        description: description.trim(),
-        accentColor,
-        invitePolicy,
-        defaultInviteRole,
-      });
-      showToast("success", "Board settings updated.");
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to update board settings.",
-      );
-    }
-  }
-
-  function handleDiscardChanges() {
-    setName(board.name);
-    setDescription(board.description);
-    setAccentColor(board.accentColor);
-    setInvitePolicy(board.invitePolicy);
-    setDefaultInviteRole(board.defaultInviteRole);
-  }
-
-  async function handleArchiveToggle() {
-    try {
-      await updateBoardMutation.mutateAsync({
-        boardId: board.id,
-        name: name.trim(),
-        description: description.trim(),
-        accentColor,
-        invitePolicy,
-        defaultInviteRole,
-        archivedAt: board.archivedAt ? null : new Date().toISOString(),
-      });
-      showToast(
-        "success",
-        board.archivedAt ? "Board unarchived." : "Board archived.",
-      );
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to update archive state.",
-      );
-    }
-  }
-
-  async function handleTogglePin() {
-    try {
-      await setBoardPinMutation.mutateAsync({
-        boardId: board.id,
-        isPinned: !board.isPinned,
-      });
-      showToast(
-        "success",
-        board.isPinned ? "Board removed from dashboard." : "Board pinned to dashboard.",
-      );
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to update board pin.",
-      );
-    }
-  }
-
-  async function handleDeleteBoard() {
-    const confirmed = window.confirm(
-      "Delete this board? This will permanently remove its tasks, members, and invitations.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteBoardMutation.mutateAsync(board.id);
-      showToast("success", "Board deleted.");
-      router.replace(getBoardsPath());
-      router.refresh();
-    } catch (error) {
-      showToast(
-        "error",
-        error instanceof Error ? error.message : "Unable to delete the board.",
-      );
-    }
-  }
+  const {
+    accentColor,
+    canEditSettings,
+    canManageLifecycle,
+    canRemoveBoard,
+    defaultInviteRole,
+    deleteBoardMutation,
+    description,
+    handleArchiveToggle,
+    handleDeleteBoard,
+    handleDiscardChanges,
+    handleSave,
+    handleTogglePin,
+    hasChanges,
+    invitePolicy,
+    name,
+    setAccentColor,
+    setBoardPinMutation,
+    setDefaultInviteRole,
+    setDescription,
+    setInvitePolicy,
+    setName,
+    updateBoardMutation,
+  } = useBoardSettingsController(board);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">

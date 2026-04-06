@@ -197,6 +197,7 @@ export function TaskBoard({
           {TASK_COLUMNS.map((column) => (
             <BoardColumn
               key={column.status}
+              boardId={board.id}
               status={column.status}
               title={column.title}
               tasks={tasksByStatus[column.status]}
@@ -209,7 +210,12 @@ export function TaskBoard({
 
       <DragOverlay>
         {activeTask ? (
-          <TaskCard task={activeTask} isDragOverlay isReadOnly={isReadOnly} />
+          <TaskCard
+            boardId={board.id}
+            task={activeTask}
+            isDragOverlay
+            isReadOnly={isReadOnly}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>
