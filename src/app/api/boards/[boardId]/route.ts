@@ -156,9 +156,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     const board = await getCurrentBoardAccess(supabase, user.id, parsedBoardId.data);
 
-    if (board.currentUserRole !== "owner") {
+    if (
+      board.currentUserRole !== "owner" &&
+      board.currentUserRole !== "admin"
+    ) {
       return NextResponse.json(
-        { error: "Only board owners can delete a board." },
+        { error: "Only board owners and admins can delete a board." },
         { status: 403 },
       );
     }

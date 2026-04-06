@@ -10,6 +10,10 @@ export function canManageBoardLifecycle(role: BoardRole): boolean {
   return role === "owner";
 }
 
+export function canDeleteBoard(role: BoardRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export function canManageBoardMembers(role: BoardRole): boolean {
   return role === "owner" || role === "admin";
 }
@@ -55,7 +59,7 @@ export function getBoardRoleCapabilities(board: BoardSummary, role: BoardRole) {
     canManageMembers: role === "owner" || role === "admin",
     canEditBoardSettings: role === "owner" || role === "admin",
     canArchiveBoard: role === "owner",
-    canDeleteBoard: role === "owner",
+    canDeleteBoard: role === "owner" || role === "admin",
     canTransferOwnership: role === "owner",
   };
 }
