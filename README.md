@@ -275,6 +275,27 @@ Seeded demo data includes:
 
 Use these accounts only for local/demo environments.
 
+## Live Demo Access
+
+If you share this project for live review, do not commit live demo credentials to the public repository or expose them in public links.
+
+Recommended approach:
+
+- keep seeded local demo credentials in this repository for local testing only
+- share live demo credentials privately in your submission email, form, or reviewer notes
+- use disposable low-privilege demo accounts for the hosted app
+- rotate or remove those live demo accounts after the review window closes
+
+Suggested private handoff format:
+
+- Live URL: `https://your-app-domain.com`
+- Owner demo:
+  - email: `owner.demo@example.com`
+  - password: `your-password`
+- Member demo:
+  - email: `member.demo@example.com`
+  - password: `your-password`
+
 ## Local Setup
 
 ### 1. Install dependencies
