@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useId, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { BoardErrorState } from "@/components/board/board-error-state";
 import { TaskActivityLoadingState } from "@/components/board/board-loading-state";
 import { TASK_COLUMNS } from "@/features/tasks/lib/task-columns";
@@ -58,6 +58,8 @@ function getInitialValues(
   task?: Task,
   initialStatus: TaskEditorValues["status"] = "todo",
 ): TaskEditorValues {
+  // Edit mode rehydrates the form from the persisted task model, while create
+  // mode starts from the requested column so drag-to-create keeps the context.
   if (!task) {
     return {
       ...DEFAULT_VALUES,
@@ -105,6 +107,10 @@ export function TaskFormModal({
   const form = useForm<TaskFormSchema>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialValues,
+  });
+  const selectedPriority = useWatch({
+    control: form.control,
+    name: "priority",
   });
 
   const detailsQuery = useTaskDetailsQuery(boardId, task?.id, isOpen && !!task);
@@ -217,6 +223,18 @@ export function TaskFormModal({
     );
   }
 
+  function getPriorityButtonLabel(value: TaskEditorValues["priority"]) {
+    if (value === "medium") {
+      return "MED";
+    }
+
+    if (value === "urgent") {
+      return "URG";
+    }
+
+    return TASK_PRIORITIES.find((priority) => priority.value === value)?.label ?? value;
+  }
+
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
       <div
@@ -302,7 +320,7 @@ export function TaskFormModal({
               </label>
               <div className="flex gap-2">
                 {TASK_PRIORITIES.map((priority) => {
-                  const isSelected = form.watch("priority") === priority.value;
+                  const isSelected = selectedPriority === priority.value;
                   return (
                     <button
                       key={priority.value}
@@ -314,7 +332,7 @@ export function TaskFormModal({
                           : "bg-surface-container-high text-primary/70 hover:bg-[#d5dcf5]"
                       }`}
                     >
-                      {priority.value === "medium" ? "MED" : priority.value === "urgent" ? "URG" : priority.label}
+                      {getPriorityButtonLabel(priority.value)}
                     </button>
                   );
                 })}
